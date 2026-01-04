@@ -1,0 +1,60 @@
+// Type definitions for audio transcription app
+
+export interface ProviderConfig {
+  id: "openai" | "groq" | "assemblyai"
+  name: string
+  apiKey: string
+  models: {
+    transcription: string
+    fineTuning: string
+  }
+  limits: {
+    maxFileSize: number // in bytes
+    supportedFormats: string[]
+  }
+}
+
+export interface Recording {
+  id: string
+  blob: Blob
+  duration: number
+  createdAt: number
+  fileName: string
+}
+
+export interface Transcript {
+  id: string
+  recordingId: string
+  text: string
+  provider: string
+  model: string
+  createdAt: number
+  audio?: Blob
+}
+
+export interface FinetuneRequest {
+  id: string
+  transcriptId: string
+  originalText: string
+  finetumedText: string
+  provider: string
+  model: string
+  systemPrompt?: string
+  createdAt: number
+}
+
+export interface AppSettings {
+  selectedProvider: "openai" | "groq" | "assemblyai" | null
+  selectedTranscriptionModel: string | null
+  selectedFinetuneModel: string | null
+  customSystemPrompt: string
+  encryptionDerived: boolean
+  theme: "light" | "dark" | "system"
+  onboardingComplete: boolean
+}
+
+export interface EncryptedData {
+  ciphertext: string
+  nonce: string
+  algorithm: "nacl"
+}
