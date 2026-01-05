@@ -2,16 +2,17 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { CircleDot, Layers, Sliders } from "lucide-react"
+import { Mic, History, Settings, BookMarked } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MinimalNav() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/transcribe", icon: CircleDot, label: "Transcribe" },
-    { href: "/transcripts", icon: Layers, label: "History" },
-    { href: "/settings", icon: Sliders, label: "Settings" },
+    { href: "/transcribe", icon: Mic, label: "Transcribe" },
+    { href: "/transcripts", icon: History, label: "History" },
+    { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
   const handleNavClick = (e: React.MouseEvent, href: string) => {
@@ -62,9 +63,10 @@ export function MobileNav() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/transcribe", icon: CircleDot, label: "Transcribe" },
-    { href: "/transcripts", icon: Layers, label: "History" },
-    { href: "/settings", icon: Sliders, label: "Settings" },
+    { href: "/transcribe", icon: Mic, label: "Transcribe" },
+    { href: "/transcripts", icon: History, label: "History" },
+    { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
   const handleNavClick = (e: React.MouseEvent, href: string) => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, PenLine, Sparkles, Tag as TagIcon } from "lucide-react"
+import { Copy, Check, Pen, Sparkles, Tag as TagIcon } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { saveTranscript } from "@/lib/storage"
 import { cn } from "@/lib/utils"
@@ -113,7 +113,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 title="Edit"
               >
-                <PenLine className="w-4 h-4" />
+                <Pen className="w-4 h-4" />
               </Button>
               <Button
                 onClick={() => handleCopy(transcript.text, "raw")}
