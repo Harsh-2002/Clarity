@@ -1,6 +1,7 @@
 {
-  "name": "my-v0-project",
+  "name": "clarity",
   "version": "0.1.0",
+  "description": "Audio transcription and AI refinement platform",
   "private": true,
   "scripts": {
     "build": "next build",

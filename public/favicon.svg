@@ -1,0 +1,10 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" rx="44" fill="#f7f6f3"/>
+  
+  <!-- Primary circle (C shape) -->
+  <circle cx="96" cy="96" r="60" stroke="#2383e2" stroke-width="12" fill="none" stroke-linecap="round"/>
+  
+  <!-- Accent dot -->
+  <circle cx="156" cy="96" r="8" fill="#2383e2"/>
+</svg>

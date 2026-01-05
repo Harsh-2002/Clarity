@@ -13,23 +13,10 @@ const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200"
 
 export const metadata: Metadata = {
   title: "Clarity",
-  description: "Transcribe audio with AI and fine-tune results",
+  description: "Audio transcription and AI refinement platform",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
+    icon: "/favicon.svg",
     apple: "/apple-icon.png",
   },
 }
