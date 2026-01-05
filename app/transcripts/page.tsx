@@ -154,7 +154,7 @@ export default function TranscriptsPage() {
                 className={`px-3 py-1 text-xs rounded-full transition-all ${
                   !selectedTag
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                    : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
                 }`}
               >
                 All
@@ -166,7 +166,7 @@ export default function TranscriptsPage() {
                   className={`px-3 py-1 text-xs rounded-full transition-all ${
                     selectedTag === tag
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                      : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
                   }`}
                 >
                   {tag}

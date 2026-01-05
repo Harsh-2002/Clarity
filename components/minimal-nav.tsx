@@ -35,7 +35,7 @@ export function MinimalNav() {
               "p-3 rounded-full transition-all duration-300 group relative",
               isActive
                 ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 hover:scale-105"
+                : "text-muted-foreground bg-secondary/30 hover:text-foreground hover:bg-secondary/60 hover:scale-105"
             )}
           >
             <item.icon 

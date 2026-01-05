@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [isPageReady, setIsPageReady] = useState(false)
   
   // Model selection states
   const [availableTranscriptionModels, setAvailableTranscriptionModels] = useState<string[]>([])
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [dataSize, setDataSize] = useState<string>("")
 
+  // Initial load - don't fetch models immediately
   useEffect(() => {
     const appSettings = getSettings()
     if (!appSettings.onboardingComplete) {
@@ -40,15 +42,23 @@ export default function SettingsPage() {
       if (appSettings.selectedProvider) {
         const prov = getProvider(appSettings.selectedProvider)
         setProvider(prov)
-        // Fetch available models
-        if (prov) {
-          fetchModels(appSettings.selectedProvider, prov.apiKey)
-        }
       }
       // Calculate data size
       calculateDataSize()
+      // Mark page as ready immediately
+      setIsPageReady(true)
     }
   }, [router])
+
+  // Defer model fetching to after page render
+  useEffect(() => {
+    if (isPageReady && settings?.selectedProvider && provider) {
+      const timer = setTimeout(() => {
+        fetchModels(settings.selectedProvider, provider.apiKey)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isPageReady, settings, provider])
 
   const calculateDataSize = useCallback(() => {
     const data = exportAllData()
@@ -301,7 +311,7 @@ export default function SettingsPage() {
               onClick={handleExportData}
               variant="outline"
               disabled={isExporting}
-              className="w-full h-auto py-4 flex items-center justify-between hover:bg-secondary/50 border-border/40 group"
+              className="w-full h-auto py-4 flex items-center justify-between bg-secondary/30 hover:bg-secondary/50 border-border/40 group transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
@@ -322,7 +332,7 @@ export default function SettingsPage() {
               onClick={handleImportData}
               variant="outline"
               disabled={isImporting}
-              className="w-full h-auto py-4 flex items-center justify-between hover:bg-secondary/50 border-border/40 group"
+              className="w-full h-auto py-4 flex items-center justify-between bg-secondary/30 hover:bg-secondary/50 border-border/40 group transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">

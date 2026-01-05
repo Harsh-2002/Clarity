@@ -259,7 +259,7 @@ export default function NotesPage() {
                   setContent(note.content)
                 }}
                 className={cn(
-                  "group p-3 md:p-4 rounded-2xl cursor-pointer transition-all duration-200 hover:bg-secondary/40",
+                  "group p-3 md:p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-secondary/30 hover:bg-secondary/60",
                   selectedNote?.id === note.id
                     ? "bg-primary/10 border border-primary/20"
                     : "bg-secondary/20 border border-transparent"

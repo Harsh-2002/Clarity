@@ -60,10 +60,10 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   return (
     <div 
       className={cn(
-        "group relative p-6 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-all duration-300 border",
+        "group relative p-6 rounded-2xl hover:bg-secondary/50 transition-all duration-300 border",
         selectionMode && isSelected 
           ? "border-primary bg-primary/5" 
-          : "border-transparent hover:border-border/50"
+          : "bg-secondary/30 border-transparent hover:border-border/50"
       )}
       onClick={selectionMode ? onToggleSelect : undefined}
       role={selectionMode ? "button" : undefined}
