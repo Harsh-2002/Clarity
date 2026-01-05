@@ -45,6 +45,18 @@
   --shadow-color: #000000;
 }
 
+/* Smooth scrolling behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Page transition effects */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    view-transition-name: root;
+  }
+}
+
 .dark {
   --background: #0a0a0a;
   --foreground: #fafafa;

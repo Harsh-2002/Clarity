@@ -45,7 +45,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <MinimalNav />
           <div className="md:pl-16 min-h-screen transition-all duration-300">
-            {children}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {children}
+            </div>
           </div>
           <MobileNav />
           <Analytics />

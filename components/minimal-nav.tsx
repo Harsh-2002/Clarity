@@ -14,6 +14,13 @@ export function MinimalNav() {
     { href: "/settings", icon: Sliders, label: "Settings" },
   ]
 
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    // Smooth scroll to top on navigation
+    if (pathname !== href) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
     <nav className="fixed left-0 top-0 h-full w-16 hidden md:flex flex-col items-center justify-center gap-8 z-50 bg-background/50 backdrop-blur-sm border-r border-border/50">
       {navItems.map((item) => {
@@ -22,6 +29,7 @@ export function MinimalNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={(e) => handleNavClick(e, item.href)}
             className={cn(
               "p-3 rounded-full transition-all duration-300 group relative",
               isActive
@@ -59,6 +67,13 @@ export function MobileNav() {
     { href: "/settings", icon: Sliders, label: "Settings" },
   ]
 
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    // Smooth scroll to top on navigation
+    if (pathname !== href) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden z-50">
       <div className="flex items-center gap-2 p-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-xl">
@@ -68,6 +83,7 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href)}
               className={cn(
                 "p-3 rounded-full transition-all duration-300",
                 isActive

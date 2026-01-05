@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { RecorderContainer } from "@/components/audio-recorder/recorder-container"
 import { TranscriptionResult } from "@/components/transcription/transcription-result"
@@ -12,26 +12,93 @@ import type { Transcript } from "@/lib/types"
 
 type PageState = "input" | "transcribing" | "finetuning" | "result" | "error"
 
+interface BackgroundTask {
+  state: PageState
+  audioBlob?: Blob
+  fileName?: string
+  error?: string | null
+  transcript?: Transcript | null
+  startedAt: number
+}
+
 export default function TranscribePage() {
   const router = useRouter()
   const [state, setState] = useState<PageState>("input")
   const [transcript, setTranscript] = useState<Transcript | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isOnboarded, setIsOnboarded] = useState(false)
+  const processingRef = useRef<boolean>(false)
 
+  // Restore background processing state on mount
   useEffect(() => {
     const settings = getSettings()
     if (!settings.onboardingComplete) {
       router.push("/onboarding")
-    } else {
-      setIsOnboarded(true)
+      return
+    }
+    
+    setIsOnboarded(true)
+
+    // Check for ongoing background task
+    const taskData = sessionStorage.getItem('clarity-background-task')
+    if (taskData) {
+      try {
+        const task: BackgroundTask = JSON.parse(taskData)
+        
+        // Only restore if task is recent (within 10 minutes)
+        const elapsed = Date.now() - task.startedAt
+        if (elapsed < 10 * 60 * 1000) {
+          console.log('[Clarity] Restoring background task:', task.state)
+          setState(task.state)
+          if (task.transcript) setTranscript(task.transcript)
+          if (task.error) setError(task.error)
+          
+          // If was processing, show appropriate loading state
+          if (task.state === 'transcribing' || task.state === 'finetuning') {
+            // Task may have completed while away, check if transcript exists
+            const lastTranscript = sessionStorage.getItem('clarity-last-transcript')
+            if (lastTranscript) {
+              const savedTranscript = JSON.parse(lastTranscript)
+              setTranscript(savedTranscript)
+              setState('result')
+              sessionStorage.removeItem('clarity-background-task')
+            }
+          }
+        } else {
+          // Task expired, clear it
+          sessionStorage.removeItem('clarity-background-task')
+        }
+      } catch (e) {
+        console.error('[Clarity] Failed to restore background task:', e)
+        sessionStorage.removeItem('clarity-background-task')
+      }
     }
   }, [router])
 
+  // Save state to sessionStorage when it changes (for background processing)
+  useEffect(() => {
+    if (state === 'transcribing' || state === 'finetuning') {
+      const task: BackgroundTask = {
+        state,
+        error,
+        transcript,
+        startedAt: Date.now(),
+      }
+      sessionStorage.setItem('clarity-background-task', JSON.stringify(task))
+    } else if (state === 'result' && transcript) {
+      sessionStorage.setItem('clarity-last-transcript', JSON.stringify(transcript))
+      sessionStorage.removeItem('clarity-background-task')
+    } else if (state === 'input') {
+      sessionStorage.removeItem('clarity-background-task')
+      sessionStorage.removeItem('clarity-last-transcript')
+    }
+  }, [state, error, transcript])
+
   const handleAudioReady = async (audioBlob: Blob, fileName: string) => {
     // Prevent duplicate processing
-    if (state !== "input") return
+    if (state !== "input" || processingRef.current) return
     
+    processingRef.current = true
     setState("transcribing")
     setError(null)
 
@@ -77,6 +144,8 @@ export default function TranscribePage() {
       console.error('[Clarity] Transcription error:', err)
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
       setState("error")
+    } finally {
+      processingRef.current = false
     }
   }
 
@@ -144,6 +213,9 @@ export default function TranscribePage() {
                   {state === "transcribing" 
                     ? "Converting your audio to text" 
                     : "Polishing grammar and clarity"}
+                </p>
+                <p className="text-xs text-muted-foreground/60 pt-4">
+                  You can navigate away - processing continues in background
                 </p>
               </div>
             </div>
