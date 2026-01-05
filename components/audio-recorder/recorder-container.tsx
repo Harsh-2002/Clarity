@@ -136,7 +136,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
         clearTimeout(holdTimeoutRef.current)
       }
     }
-  }, [recordingState.isRecording, isHoldingSpace])
+  }, [recordingState.isRecording, isHoldingSpace, recorder])
 
   useEffect(() => {
     if (!recordingState.isRecording || recordingState.isPaused) return
@@ -336,7 +336,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       {showDurationWarning && (
         <div className="absolute top-16 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm px-4 py-2 rounded-full inline-block">
-            ⏱️ 30 minutes reached – Consider stopping soon
+            30 minutes reached – Consider stopping soon
           </div>
         </div>
       )}
@@ -345,13 +345,18 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       {isHoldingSpace && recordingState.isRecording && (
         <div className="absolute top-24 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-2 duration-200 z-20">
           <div className="bg-primary/90 backdrop-blur-md text-primary-foreground text-sm font-medium px-6 py-3 rounded-full inline-block shadow-lg border border-primary">
-            🎙️ Release spacebar to stop
+            Release spacebar to stop
           </div>
         </div>
       )}
 
       {/* Main Interaction Area */}
-      <div className="relative z-10 flex flex-col items-center gap-8 transition-all duration-500">
+      <div
+        className={cn(
+          "relative z-10 flex flex-col items-center gap-8 transition-all duration-500",
+          error ? "mt-14" : "mt-0"
+        )}
+      >
         
         {recordingState.isRecording ? (
           // Active Recording State

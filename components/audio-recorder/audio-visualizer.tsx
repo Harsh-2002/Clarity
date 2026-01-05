@@ -11,7 +11,7 @@ interface AudioVisualizerProps {
 export function AudioVisualizer({ frequencyData, isRecording }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { theme } = useTheme()
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const smoothedDataRef = useRef<number[]>([])
 
   useEffect(() => {
@@ -45,26 +45,27 @@ export function AudioVisualizer({ frequencyData, isRecording }: AudioVisualizerP
         smoothedDataRef.current = Array.from(frequencyData)
       }
       
-      // Apply smoothing to reduce jitter
-      const smoothingFactor = 0.3
+      // Apply smoothing to reduce jitter but keep responsiveness
+      const smoothingFactor = 0.18
       for (let i = 0; i < frequencyData.length; i++) {
         smoothedDataRef.current[i] = smoothedDataRef.current[i] * (1 - smoothingFactor) + frequencyData[i] * smoothingFactor
       }
       
       // Draw smooth waveform using time-domain data
-      ctx.lineWidth = 2.5
+      ctx.lineWidth = 3
       ctx.strokeStyle = theme === "dark" ? "rgb(59, 130, 246)" : "rgb(59, 130, 246)"
       ctx.lineCap = "round"
       ctx.lineJoin = "round"
       
       ctx.beginPath()
       
+      const amplitudeScale = canvas.height * 0.5 // Use 50% of canvas height for strong reaction
+      
       for (let i = 0; i < frequencyData.length; i++) {
         const x = i * sliceWidth
         
-        // Use smoothed data and increase amplitude significantly
+        // Use smoothed data and scale up the height
         const normalizedValue = (smoothedDataRef.current[i] - 128) / 128.0
-        const amplitudeScale = canvas.height * 0.4 // Use 80% of canvas height (40% each direction)
         const y = centerY + (normalizedValue * amplitudeScale)
         
         if (i === 0) {

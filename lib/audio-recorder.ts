@@ -39,7 +39,9 @@ export class AudioRecorder {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       this.analyser = this.audioContext.createAnalyser()
       this.analyser.fftSize = 2048 // Larger FFT for smoother, slower animation
-      this.analyser.smoothingTimeConstant = 0.8 // Add smoothing (0-1, higher = smoother)
+      this.analyser.smoothingTimeConstant = 0.4 // Moderate smoothing for stronger reaction
+      this.analyser.minDecibels = -90
+      this.analyser.maxDecibels = -10
       this.microphone = this.audioContext.createMediaStreamSource(stream)
       this.microphone.connect(this.analyser)
 
@@ -146,15 +148,12 @@ export class AudioRecorder {
     // Voice Activity Detection (use frequency data)
     const average = freqArray.reduce((sum, val) => sum + val, 0) / freqArray.length
     
+    // Track voice activity but don't auto-pause to avoid interrupting recording
     if (average > this.silenceThreshold) {
       this.lastVoiceTime = Date.now()
-    } else {
-      // Check if we've been silent for too long
-      if (Date.now() - this.lastVoiceTime > this.silenceDuration && this.mediaRecorder?.state === "recording") {
-        console.log("[VAD] Auto-pausing due to silence")
-        this.pauseRecording()
-      }
     }
+    // VAD auto-pause disabled to prevent unwanted interruptions
+    // Users can manually pause if needed
 
     if (this.mediaRecorder?.state === "recording") {
       this.animationId = requestAnimationFrame(() => this.visualize())
