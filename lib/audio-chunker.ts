@@ -34,57 +34,86 @@ export async function chunkAudio(
     ]
   }
 
-  // Load audio into AudioContext
-  const arrayBuffer = await audioBlob.arrayBuffer()
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-
-  const duration = audioBuffer.duration
-  const sampleRate = audioBuffer.sampleRate
-  const numberOfChannels = audioBuffer.numberOfChannels
-
-  // Estimate chunk duration based on size
-  const bytesPerSecond = audioBlob.size / duration
-  const chunkDuration = (maxSizeBytes * 0.8) / bytesPerSecond // 80% of max size for safety
-
-  const chunks: AudioChunk[] = []
-  let currentTime = 0
-  let chunkIndex = 0
-
-  while (currentTime < duration) {
-    const startTime = Math.max(0, currentTime - overlapSeconds)
-    const endTime = Math.min(duration, currentTime + chunkDuration)
-
-    // Extract chunk from audio buffer
-    const chunkLength = Math.ceil((endTime - startTime) * sampleRate)
-    const chunkBuffer = audioContext.createBuffer(numberOfChannels, chunkLength, sampleRate)
-
-    // Copy audio data for each channel
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      const sourceData = audioBuffer.getChannelData(channel)
-      const targetData = chunkBuffer.getChannelData(channel)
-      const startSample = Math.floor(startTime * sampleRate)
-
-      for (let i = 0; i < chunkLength; i++) {
-        targetData[i] = sourceData[startSample + i] || 0
-      }
+  try {
+    // Load audio into AudioContext
+    const arrayBuffer = await audioBlob.arrayBuffer()
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    
+    let audioBuffer
+    try {
+      audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+    } catch (decodeError) {
+      console.error('[Clarity] Audio decode failed:', decodeError)
+      // If decode fails, just return as single chunk and let the API handle it
+      return [
+        {
+          blob: audioBlob,
+          startTime: 0,
+          endTime: 0,
+          index: 0,
+        },
+      ]
     }
 
-    // Convert buffer to blob
-    const chunkBlob = await audioBufferToBlob(chunkBuffer, audioBlob.type)
+    const duration = audioBuffer.duration
+    const sampleRate = audioBuffer.sampleRate
+    const numberOfChannels = audioBuffer.numberOfChannels
 
-    chunks.push({
-      blob: chunkBlob,
-      startTime,
-      endTime,
-      index: chunkIndex,
-    })
+    // Estimate chunk duration based on size
+    const bytesPerSecond = audioBlob.size / duration
+    const chunkDuration = (maxSizeBytes * 0.8) / bytesPerSecond // 80% of max size for safety
 
-    currentTime += chunkDuration
-    chunkIndex++
+    const chunks: AudioChunk[] = []
+    let currentTime = 0
+    let chunkIndex = 0
+
+    while (currentTime < duration) {
+      const startTime = Math.max(0, currentTime - overlapSeconds)
+      const endTime = Math.min(duration, currentTime + chunkDuration)
+
+      // Extract chunk from audio buffer
+      const chunkLength = Math.ceil((endTime - startTime) * sampleRate)
+      const chunkBuffer = audioContext.createBuffer(numberOfChannels, chunkLength, sampleRate)
+
+      // Copy audio data for each channel
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sourceData = audioBuffer.getChannelData(channel)
+        const targetData = chunkBuffer.getChannelData(channel)
+        const startSample = Math.floor(startTime * sampleRate)
+
+        for (let i = 0; i < chunkLength; i++) {
+          targetData[i] = sourceData[startSample + i] || 0
+        }
+      }
+
+      // Convert buffer to blob
+      const chunkBlob = await audioBufferToBlob(chunkBuffer, audioBlob.type)
+
+      chunks.push({
+        blob: chunkBlob,
+        startTime,
+        endTime,
+        index: chunkIndex,
+      })
+
+      currentTime += chunkDuration
+      chunkIndex++
+    }
+
+    await audioContext.close()
+    return chunks
+  } catch (error) {
+    console.error('[Clarity] Audio chunking failed:', error)
+    // Fallback: return as single chunk
+    return [
+      {
+        blob: audioBlob,
+        startTime: 0,
+        endTime: 0,
+        index: 0,
+      },
+    ]
   }
-
-  return chunks
 }
 
 /**

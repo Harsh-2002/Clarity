@@ -8,12 +8,13 @@ async function transcribeWithOpenAI(
   apiKey: string,
   audioBlob: Blob,
   model: string,
+  fileName: string = "audio.webm",
 ): Promise<{ text: string; success: boolean; error?: string }> {
   try {
     const result = await retryWithBackoff(
       async () => {
         const formData = new FormData()
-        formData.append("file", audioBlob, "audio.webm")
+        formData.append("file", audioBlob, fileName)
         formData.append("model", model)
 
         const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -25,8 +26,12 @@ async function transcribeWithOpenAI(
         })
 
         if (!response.ok) {
-          const error: any = new Error("OpenAI transcription failed")
+          const errorData = await response.json().catch(() => ({}))
+          const error: any = new Error(
+            errorData.error?.message || `OpenAI transcription failed (${response.status})`
+          )
           error.status = response.status
+          error.details = errorData
           throw error
         }
 
@@ -37,6 +42,7 @@ async function transcribeWithOpenAI(
     )
     return result
   } catch (error) {
+    console.error('[Clarity] OpenAI transcription error:', error)
     return { 
       text: "", 
       success: false, 
@@ -49,12 +55,13 @@ async function transcribeWithGroq(
   apiKey: string,
   audioBlob: Blob,
   model: string,
+  fileName: string = "audio.webm",
 ): Promise<{ text: string; success: boolean; error?: string }> {
   try {
     const result = await retryWithBackoff(
       async () => {
         const formData = new FormData()
-        formData.append("file", audioBlob, "audio.webm")
+        formData.append("file", audioBlob, fileName)
         formData.append("model", model)
 
         const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
@@ -66,8 +73,12 @@ async function transcribeWithGroq(
         })
 
         if (!response.ok) {
-          const error: any = new Error("Groq transcription failed")
+          const errorData = await response.json().catch(() => ({}))
+          const error: any = new Error(
+            errorData.error?.message || `Groq transcription failed (${response.status})`
+          )
           error.status = response.status
+          error.details = errorData
           throw error
         }
 
@@ -78,6 +89,7 @@ async function transcribeWithGroq(
     )
     return result
   } catch (error) {
+    console.error('[Clarity] Groq transcription error:', error)
     return { 
       text: "", 
       success: false, 
@@ -192,10 +204,10 @@ export async function transcribeAudio(
       let chunkResult
       switch (settings.selectedProvider) {
         case "openai":
-          chunkResult = await transcribeWithOpenAI(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel)
+          chunkResult = await transcribeWithOpenAI(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel, audioFileName)
           break
         case "groq":
-          chunkResult = await transcribeWithGroq(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel)
+          chunkResult = await transcribeWithGroq(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel, audioFileName)
           break
         case "assemblyai":
           chunkResult = await transcribeWithAssemblyAI(provider.apiKey, chunk.blob)
@@ -222,10 +234,10 @@ export async function transcribeAudio(
     let transcriptionResult
     switch (settings.selectedProvider) {
       case "openai":
-        transcriptionResult = await transcribeWithOpenAI(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
+        transcriptionResult = await transcribeWithOpenAI(provider.apiKey, audioBlob, settings.selectedTranscriptionModel, audioFileName)
         break
       case "groq":
-        transcriptionResult = await transcribeWithGroq(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
+        transcriptionResult = await transcribeWithGroq(provider.apiKey, audioBlob, settings.selectedTranscriptionModel, audioFileName)
         break
       case "assemblyai":
         transcriptionResult = await transcribeWithAssemblyAI(provider.apiKey, audioBlob)

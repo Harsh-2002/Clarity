@@ -222,12 +222,30 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       return
     }
 
-    // Validate file size (soft check, chunking handles larger files)
-    // We'll just warn if it's huge, but let it pass to the chunker
+    // Validate file type and size
+    const fileType = file.type
+    const fileExtension = file.name.split('.').pop()?.toLowerCase()
     
-    // Validate file type
-    const fileType = file.type.split("/")[1]
-    // Basic check, but we can be lenient as the service handles most
+    // OpenAI/Groq support: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
+    const supportedFormats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+    
+    if (!fileExtension || !supportedFormats.includes(fileExtension)) {
+      setError(`Unsupported format: .${fileExtension}. Supported: ${supportedFormats.join(', ')}`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+      return
+    }
+
+    // Check file size (25MB limit for most providers)
+    const maxSize = 25 * 1024 * 1024 // 25MB
+    if (file.size > maxSize) {
+      setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 25MB. Try recording directly instead.`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+      return
+    }
     
     onAudioReady(file, file.name, 0)
 
@@ -339,7 +357,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       <input 
         ref={fileInputRef} 
         type="file" 
-        accept="audio/*" 
+        accept="audio/flac,audio/m4a,audio/mp3,audio/mp4,audio/mpeg,audio/mpga,audio/oga,audio/ogg,audio/wav,audio/webm,.flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm" 
         onChange={handleFileSelect} 
         className="hidden" 
       />
