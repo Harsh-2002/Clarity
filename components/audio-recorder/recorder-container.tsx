@@ -28,9 +28,20 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
   const [isHoldingSpace, setIsHoldingSpace] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setRecorder(new AudioRecorder())
+    
+    // Cleanup all timeouts on unmount
+    return () => {
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current)
+      }
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current)
+      }
+    }
   }, [])
 
   // Lock orientation to landscape on mobile when recording
@@ -136,7 +147,11 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
         // Show warning at 30 minutes (1800 seconds)
         if (newDuration === 1800) {
           setShowDurationWarning(true)
-          setTimeout(() => setShowDurationWarning(false), 5000)
+          // Clear any existing warning timeout
+          if (warningTimeoutRef.current) {
+            clearTimeout(warningTimeoutRef.current)
+          }
+          warningTimeoutRef.current = setTimeout(() => setShowDurationWarning(false), 5000)
         }
         
         return {

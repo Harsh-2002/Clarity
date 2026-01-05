@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Copy, Check, CheckSquare, Square } from "lucide-react"
 import type { Transcript } from "@/lib/types"
@@ -21,16 +21,32 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   const [copiedRaw, setCopiedRaw] = useState(false)
   const [copiedFineTuned, setCopiedFineTuned] = useState(false)
   const hasFinetuned = Boolean(transcript.fineTunedText)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleCopy = async (text: string, type: "raw" | "finetuned") => {
     try {
       await navigator.clipboard.writeText(text)
+      
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      
       if (type === "raw") {
         setCopiedRaw(true)
-        setTimeout(() => setCopiedRaw(false), 2000)
+        timeoutRef.current = setTimeout(() => setCopiedRaw(false), 2000)
       } else {
         setCopiedFineTuned(true)
-        setTimeout(() => setCopiedFineTuned(false), 2000)
+        timeoutRef.current = setTimeout(() => setCopiedFineTuned(false), 2000)
       }
     } catch (err) {
       console.error("Failed to copy text:", err)

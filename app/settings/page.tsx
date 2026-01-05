@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Download, Upload, Trash2, SettingsIcon, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -50,7 +50,7 @@ export default function SettingsPage() {
     }
   }, [router])
 
-  const calculateDataSize = () => {
+  const calculateDataSize = useCallback(() => {
     const data = exportAllData()
     const json = JSON.stringify(data, null, 2)
     const bytes = new Blob([json]).size
@@ -64,7 +64,7 @@ export default function SettingsPage() {
     } else {
       setDataSize(`${bytes} bytes`)
     }
-  }
+  }, [])
 
   const fetchModels = async (providerId: string, apiKey: string) => {
     setIsFetchingModels(true)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Copy, Check, PenLine, Sparkles, ArrowLeft, Tag as TagIcon } from "lucide-react"
 import type { Transcript } from "@/lib/types"
@@ -21,6 +21,12 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
   const [copiedRaw, setCopiedRaw] = useState(false)
   const [copiedFineTuned, setCopiedFineTuned] = useState(false)
   const [tags, setTags] = useState<string[]>(transcript.tags || [])
+
+  // Sync state when transcript prop changes
+  useEffect(() => {
+    setTags(transcript.tags || [])
+    setEditedText(transcript.text)
+  }, [transcript])
 
   // AI-suggested tags based on content keywords
   const suggestedTags = (() => {
@@ -54,10 +60,12 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
       await navigator.clipboard.writeText(text)
       if (type === "raw") {
         setCopiedRaw(true)
-        setTimeout(() => setCopiedRaw(false), 2000)
+        const timer = setTimeout(() => setCopiedRaw(false), 2000)
+        return () => clearTimeout(timer)
       } else {
         setCopiedFineTuned(true)
-        setTimeout(() => setCopiedFineTuned(false), 2000)
+        const timer = setTimeout(() => setCopiedFineTuned(false), 2000)
+        return () => clearTimeout(timer)
       }
     } catch (err) {
       console.error("Failed to copy text:", err)
