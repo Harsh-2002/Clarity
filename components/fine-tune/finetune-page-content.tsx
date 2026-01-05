@@ -90,72 +90,71 @@ export function FinetunedPageContent() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-8">
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Fine-tune Transcription</h1>
-          <p className="text-muted-foreground">Improve your transcription with AI</p>
-        </div>
+    <div className="max-w-3xl mx-auto px-4 py-12 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-light tracking-tight">Refine</h1>
+        <p className="text-muted-foreground">Polish your thoughts with AI</p>
+      </div>
 
-        {state === "input" && transcript && (
+      {state === "input" && transcript && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Transcription</h3>
-              <div className="bg-secondary rounded-lg p-4 min-h-32 text-sm whitespace-pre-wrap break-words leading-relaxed">
-                {transcript.text}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">Custom Instructions (Optional)</label>
-              <textarea
-                value={customPrompt}
-                onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder="E.g., Focus on technical terms, maintain punctuation, etc."
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground min-h-24 resize-none"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button onClick={() => router.push("/transcribe")} variant="outline" className="flex-1">
-                Back
-              </Button>
-              <Button onClick={handleStartFinetuning} className="flex-1">
-                Fine-tune
-              </Button>
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Original Text</h3>
+            <div className="text-lg leading-relaxed font-light text-foreground/90 whitespace-pre-wrap">
+              {transcript.text}
             </div>
           </div>
-        )}
 
-        {state === "finetuning" && (
-          <div className="flex flex-col items-center justify-center space-y-4 py-8">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-center text-muted-foreground">Improving your transcription...</p>
-          </div>
-        )}
-
-        {state === "result" && finetune && (
-          <div className="space-y-4">
-            <FinetuneComparison
-              finetune={finetune}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onRetry={handleRetry}
+          <div className="space-y-4 pt-4 border-t border-border/40">
+            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Instructions</label>
+            <textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Add specific instructions for refinement (e.g., 'Make it more concise', 'Fix grammar only')..."
+              className="w-full px-0 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none min-h-[100px] resize-none text-lg font-light placeholder:text-muted-foreground/50"
             />
           </div>
-        )}
 
-        {state === "error" && (
-          <div className="space-y-4">
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-            <Button onClick={() => router.push("/transcribe")} className="w-full">
-              Back to Transcribe
+          <div className="flex gap-4 pt-4">
+            <Button onClick={handleStartFinetuning} className="px-8 h-12 text-base rounded-full">
+              Start Refinement
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {state === "finetuning" && (
+        <div className="flex flex-col items-center justify-center space-y-6 py-20 animate-in fade-in duration-500">
+          <div className="relative">
+            <div className="w-12 h-12 border-2 border-primary/20 rounded-full" />
+            <div className="absolute top-0 left-0 w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="text-lg font-light text-muted-foreground animate-pulse">Refining your thoughts...</p>
+        </div>
+      )}
+
+      {state === "result" && finetune && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <FinetuneComparison
+            finetune={finetune}
+            onAccept={handleAccept}
+            onReject={handleReject}
+            onRetry={handleRetry}
+          />
+        </div>
+      )}
+
+      {state === "error" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="bg-destructive/5 border-l-2 border-destructive p-6">
+            <h3 className="text-destructive font-medium mb-2">Error</h3>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+          <Button onClick={() => setState("input")} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,36 +15,40 @@ export function FinetuneComparison({ finetune, onAccept, onReject, onRetry }: Fi
   const [showSideBySide, setShowSideBySide] = useState(false)
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button
-          onClick={() => setShowSideBySide(false)}
-          variant={!showSideBySide ? "default" : "outline"}
-          className="flex-1"
-        >
-          Stacked
-        </Button>
-        <Button
-          onClick={() => setShowSideBySide(true)}
-          variant={showSideBySide ? "default" : "outline"}
-          className="flex-1"
-        >
-          Side by Side
-        </Button>
+    <div className="space-y-8">
+      <div className="flex justify-end">
+        <div className="inline-flex rounded-lg border border-border p-1">
+          <button
+            onClick={() => setShowSideBySide(false)}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              !showSideBySide ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Stacked
+          </button>
+          <button
+            onClick={() => setShowSideBySide(true)}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              showSideBySide ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Split
+          </button>
+        </div>
       </div>
 
       {!showSideBySide && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Original</h3>
-            <div className="bg-secondary rounded-lg p-4 min-h-24 text-sm whitespace-pre-wrap break-words leading-relaxed">
+        <div className="space-y-8">
+          <div className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original</h3>
+            <div className="text-base leading-relaxed font-light whitespace-pre-wrap">
               {finetune.originalText}
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Improved</h3>
-            <div className="bg-secondary rounded-lg p-4 min-h-24 text-sm whitespace-pre-wrap break-words leading-relaxed border-2 border-primary">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider">Refined</h3>
+            <div className="text-lg leading-relaxed font-light whitespace-pre-wrap text-foreground">
               {finetune.finetumedText}
             </div>
           </div>
@@ -52,32 +56,32 @@ export function FinetuneComparison({ finetune, onAccept, onReject, onRetry }: Fi
       )}
 
       {showSideBySide && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Original</h3>
-            <div className="bg-secondary rounded-lg p-3 min-h-40 text-xs whitespace-pre-wrap break-words leading-relaxed max-h-96 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-8">
+          <div className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original</h3>
+            <div className="text-sm leading-relaxed font-light whitespace-pre-wrap max-h-[60vh] overflow-y-auto pr-2">
               {finetune.originalText}
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Improved</h3>
-            <div className="bg-secondary rounded-lg p-3 min-h-40 text-xs whitespace-pre-wrap break-words leading-relaxed border-2 border-primary max-h-96 overflow-y-auto">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider">Refined</h3>
+            <div className="text-base leading-relaxed font-light whitespace-pre-wrap max-h-[60vh] overflow-y-auto pr-2">
               {finetune.finetumedText}
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Button onClick={onReject} variant="outline" className="flex-1 bg-transparent">
-          Reject
+      <div className="flex gap-4 pt-4 border-t border-border/40">
+        <Button onClick={onReject} variant="ghost" className="flex-1 text-muted-foreground hover:text-destructive">
+          Discard
         </Button>
-        <Button onClick={onRetry} variant="outline" className="flex-1 bg-transparent">
-          Retry
+        <Button onClick={onRetry} variant="ghost" className="flex-1">
+          Try Again
         </Button>
-        <Button onClick={onAccept} className="flex-1">
-          Accept
+        <Button onClick={onAccept} className="flex-1 rounded-full">
+          Save Changes
         </Button>
       </div>
     </div>

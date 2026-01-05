@@ -1,5 +1,7 @@
 import type { Transcript } from "./types"
 import { getProvider, saveTranscript, getSettings } from "./storage"
+import { chunkAudio, mergeChunkTranscriptions } from "./audio-chunker"
+import { PROVIDER_CONFIGS } from "./providers"
 
 async function transcribeWithOpenAI(
   apiKey: string,
@@ -150,29 +152,74 @@ export async function transcribeAudio(
     return { transcript: null, error: "Provider not found" }
   }
 
-  let transcriptionResult
-  switch (settings.selectedProvider) {
-    case "openai":
-      transcriptionResult = await transcribeWithOpenAI(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
-      break
-    case "groq":
-      transcriptionResult = await transcribeWithGroq(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
-      break
-    case "assemblyai":
-      transcriptionResult = await transcribeWithAssemblyAI(provider.apiKey, audioBlob)
-      break
-    default:
-      return { transcript: null, error: "Unknown provider" }
-  }
+  const providerConfig = PROVIDER_CONFIGS[settings.selectedProvider]
+  const maxFileSize = providerConfig.limits.maxFileSize
 
-  if (!transcriptionResult.success) {
-    return { transcript: null, error: transcriptionResult.error }
+  // Check if chunking is needed
+  let transcriptionText = ""
+  
+  if (audioBlob.size > maxFileSize) {
+    // Split audio into chunks with 2-second overlap
+    const chunks = await chunkAudio(audioBlob, maxFileSize, 2)
+    const chunkResults: Array<{ text: string; startTime: number; endTime: number }> = []
+
+    for (const chunk of chunks) {
+      let chunkResult
+      switch (settings.selectedProvider) {
+        case "openai":
+          chunkResult = await transcribeWithOpenAI(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel)
+          break
+        case "groq":
+          chunkResult = await transcribeWithGroq(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel)
+          break
+        case "assemblyai":
+          chunkResult = await transcribeWithAssemblyAI(provider.apiKey, chunk.blob)
+          break
+        default:
+          return { transcript: null, error: "Unknown provider" }
+      }
+
+      if (!chunkResult.success) {
+        return { transcript: null, error: `Chunk ${chunk.index + 1} failed: ${chunkResult.error}` }
+      }
+
+      chunkResults.push({
+        text: chunkResult.text,
+        startTime: chunk.startTime,
+        endTime: chunk.endTime,
+      })
+    }
+
+    // Merge chunk transcriptions
+    transcriptionText = mergeChunkTranscriptions(chunkResults, 2)
+  } else {
+    // Process as single file
+    let transcriptionResult
+    switch (settings.selectedProvider) {
+      case "openai":
+        transcriptionResult = await transcribeWithOpenAI(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
+        break
+      case "groq":
+        transcriptionResult = await transcribeWithGroq(provider.apiKey, audioBlob, settings.selectedTranscriptionModel)
+        break
+      case "assemblyai":
+        transcriptionResult = await transcribeWithAssemblyAI(provider.apiKey, audioBlob)
+        break
+      default:
+        return { transcript: null, error: "Unknown provider" }
+    }
+
+    if (!transcriptionResult.success) {
+      return { transcript: null, error: transcriptionResult.error }
+    }
+
+    transcriptionText = transcriptionResult.text
   }
 
   const transcript: Transcript = {
     id: Date.now().toString(),
     recordingId: Date.now().toString(),
-    text: transcriptionResult.text,
+    text: transcriptionText,
     provider: settings.selectedProvider,
     model: settings.selectedTranscriptionModel,
     createdAt: Date.now(),

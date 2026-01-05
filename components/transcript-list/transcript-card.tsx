@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Copy, Check } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
@@ -12,27 +14,82 @@ interface TranscriptCardProps {
 export function TranscriptCard({ transcript, onDelete }: TranscriptCardProps) {
   const router = useRouter()
   const date = new Date(transcript.createdAt).toLocaleDateString()
+  const [copiedRaw, setCopiedRaw] = useState(false)
+  const [copiedFineTuned, setCopiedFineTuned] = useState(false)
+  const hasFinetuned = Boolean(transcript.fineTunedText)
+
+  const handleCopy = async (text: string, type: "raw" | "finetuned") => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (type === "raw") {
+        setCopiedRaw(true)
+        setTimeout(() => setCopiedRaw(false), 2000)
+      } else {
+        setCopiedFineTuned(true)
+        setTimeout(() => setCopiedFineTuned(false), 2000)
+      }
+    } catch (err) {
+      console.error("Failed to copy text:", err)
+    }
+  }
 
   return (
-    <div className="border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 space-y-1 min-w-0">
-          <p className="text-xs text-muted-foreground">{date}</p>
-          <p className="text-sm line-clamp-2 break-words">{transcript.text}</p>
+    <div className="group relative p-6 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-all duration-300 border border-transparent hover:border-border/50">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{date}</p>
+          {hasFinetuned && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+              Refined
+            </span>
+          )}
         </div>
-      </div>
 
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div className="text-xs text-muted-foreground">
-          {transcript.provider} · {transcript.model}
+        <div className="space-y-2">
+          <p className="text-base leading-relaxed font-light text-foreground/90 line-clamp-3">
+            {hasFinetuned ? transcript.fineTunedText : transcript.text}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => router.push(`/fine-tune?transcriptId=${transcript.id}`)} variant="outline" size="sm">
-            Tune
-          </Button>
-          <Button onClick={() => onDelete?.(transcript.id)} variant="outline" size="sm" className="text-destructive">
-            Delete
-          </Button>
+
+        <div className="flex items-center justify-between pt-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          <div className="text-xs text-muted-foreground font-mono">
+            {transcript.model}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => handleCopy(hasFinetuned ? transcript.fineTunedText! : transcript.text, hasFinetuned ? "finetuned" : "raw")}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-background/50"
+            >
+              {copiedRaw || copiedFineTuned ? (
+                <Check className="w-3 h-3 text-green-600" />
+              ) : (
+                <Copy className="w-3 h-3" />
+              )}
+            </Button>
+            
+            {!hasFinetuned && (
+              <Button 
+                onClick={() => router.push(`/fine-tune?transcriptId=${transcript.id}`)} 
+                variant="ghost" 
+                size="sm"
+                className="h-8 px-3 text-xs hover:bg-background/50"
+              >
+                Refine
+              </Button>
+            )}
+            
+            <Button 
+              onClick={() => onDelete?.(transcript.id)} 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
     </div>

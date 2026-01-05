@@ -26,6 +26,7 @@ export interface Transcript {
   id: string
   recordingId: string
   text: string
+  fineTunedText?: string
   provider: string
   model: string
   createdAt: number
@@ -48,6 +49,7 @@ export interface AppSettings {
   selectedTranscriptionModel: string | null
   selectedFinetuneModel: string | null
   customSystemPrompt: string
+  autoFineTune: boolean
   encryptionDerived: boolean
   theme: "light" | "dark" | "system"
   onboardingComplete: boolean

@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import { RecorderContainer } from "@/components/audio-recorder/recorder-container"
 import { TranscriptionResult } from "@/components/transcription/transcription-result"
 import { Button } from "@/components/ui/button"
-import { getSettings } from "@/lib/storage"
+import { getSettings, saveTranscript } from "@/lib/storage"
 import { transcribeAudio } from "@/lib/transcription-service"
+import { fineTuneText } from "@/lib/finetuning-service"
 import type { Transcript } from "@/lib/types"
 
-type PageState = "input" | "transcribing" | "result" | "error"
+type PageState = "input" | "transcribing" | "finetuning" | "result" | "error"
 
 export default function TranscribePage() {
   const router = useRouter()
@@ -36,15 +37,54 @@ export default function TranscribePage() {
     if (result.error) {
       setError(result.error)
       setState("error")
-    } else if (result.transcript) {
-      setTranscript(result.transcript)
+      return
+    }
+
+    if (result.transcript) {
+      const settings = getSettings()
+      
+      // Auto fine-tune if enabled and model is configured
+      if (settings.autoFineTune && settings.selectedFinetuneModel) {
+        setState("finetuning")
+        
+        const fineTuneResult = await fineTuneText(result.transcript.text)
+        
+        if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+          const updatedTranscript = {
+            ...result.transcript,
+            fineTunedText: fineTuneResult.fineTunedText,
+          }
+          saveTranscript(updatedTranscript)
+          setTranscript(updatedTranscript)
+        } else {
+          // If fine-tuning fails, just show the raw transcript
+          setTranscript(result.transcript)
+        }
+      } else {
+        setTranscript(result.transcript)
+      }
+      
       setState("result")
     }
   }
 
-  const handleFinetune = () => {
-    if (transcript) {
-      router.push(`/fine-tune?transcriptId=${transcript.id}`)
+  const handleFinetune = async () => {
+    if (!transcript) return
+
+    setState("finetuning")
+    const fineTuneResult = await fineTuneText(transcript.text)
+
+    if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+      const updatedTranscript = {
+        ...transcript,
+        fineTunedText: fineTuneResult.fineTunedText,
+      }
+      saveTranscript(updatedTranscript)
+      setTranscript(updatedTranscript)
+      setState("result")
+    } else {
+      setError(fineTuneResult.error || "Fine-tuning failed")
+      setState("error")
     }
   }
 
@@ -59,43 +99,52 @@ export default function TranscribePage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="flex items-center justify-center min-h-screen px-4 py-8">
-        <div className="w-full max-w-md space-y-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Transcribe Audio</h1>
-            <p className="text-muted-foreground">Record or upload audio to get started</p>
-          </div>
+    <main className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-3xl transition-all duration-500">
+          
+          {state === "input" && (
+            <div className="animate-in fade-in zoom-in-95 duration-500">
+              <RecorderContainer onAudioReady={handleAudioReady} />
+            </div>
+          )}
 
-          {state === "input" && <RecorderContainer onAudioReady={handleAudioReady} />}
-
-          {state === "transcribing" && (
-            <div className="flex flex-col items-center justify-center space-y-4 py-8">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-center text-muted-foreground">Transcribing your audio...</p>
+          {(state === "transcribing" || state === "finetuning") && (
+            <div className="flex flex-col items-center justify-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+              <div className="relative w-20 h-20">
+                <div className="absolute inset-0 rounded-full border-2 border-primary/10" />
+                <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              </div>
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-light tracking-tight">
+                  {state === "transcribing" ? "Transcribing..." : "Refining..."}
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  {state === "transcribing" 
+                    ? "Converting your audio to text" 
+                    : "Polishing grammar and clarity"}
+                </p>
+              </div>
             </div>
           )}
 
           {state === "result" && transcript && (
-            <TranscriptionResult transcript={transcript} onFinetune={handleFinetune} onBack={handleStartOver} />
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+              <TranscriptionResult transcript={transcript} onFinetune={handleFinetune} onBack={handleStartOver} />
+            </div>
           )}
 
           {state === "error" && (
-            <div className="space-y-4">
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-                <p className="text-sm text-destructive">{error}</p>
+            <div className="max-w-md mx-auto space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
+              <div className="space-y-2">
+                <h2 className="text-xl font-medium text-destructive">Something went wrong</h2>
+                <p className="text-muted-foreground">{error}</p>
               </div>
-              <Button onClick={handleStartOver} className="w-full">
+              <Button onClick={handleStartOver} variant="outline" className="min-w-[120px]">
                 Try Again
               </Button>
             </div>
           )}
-
-          <div className="pt-4 border-t border-border">
-            <Button onClick={() => router.push("/transcripts")} variant="ghost" className="w-full">
-              View all transcripts
-            </Button>
-          </div>
         </div>
       </div>
     </main>

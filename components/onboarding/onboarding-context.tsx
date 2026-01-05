@@ -21,6 +21,10 @@ interface OnboardingContextType {
   completeOnboarding: () => void
   isValidating: boolean
   validationError: string | null
+  availableTranscriptionModels: string[]
+  setAvailableTranscriptionModels: (models: string[]) => void
+  availableFinetuneModels: string[]
+  setAvailableFinetuneModels: (models: string[]) => void
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
@@ -34,6 +38,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [customSystemPrompt, setCustomSystemPrompt] = useState("")
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [availableTranscriptionModels, setAvailableTranscriptionModels] = useState<string[]>([])
+  const [availableFinetuneModels, setAvailableFinetuneModels] = useState<string[]>([])
 
   const completeOnboarding = () => {
     const settings: AppSettings = {
@@ -41,6 +47,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       selectedTranscriptionModel: transcriptionModel,
       selectedFinetuneModel: finetuneModel,
       customSystemPrompt,
+      autoFineTune: false,
       encryptionDerived: true,
       theme: "system",
       onboardingComplete: true,
@@ -66,6 +73,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         completeOnboarding,
         isValidating,
         validationError,
+        availableTranscriptionModels,
+        setAvailableTranscriptionModels,
+        availableFinetuneModels,
+        setAvailableFinetuneModels,
       }}
     >
       {children}

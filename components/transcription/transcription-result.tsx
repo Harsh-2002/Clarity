@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Copy, Check, PenLine, Sparkles, ArrowLeft } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { saveTranscript } from "@/lib/storage"
+import { cn } from "@/lib/utils"
 
 interface TranscriptionResultProps {
   transcript: Transcript
@@ -15,6 +17,8 @@ interface TranscriptionResultProps {
 export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: TranscriptionResultProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedText, setEditedText] = useState(transcript.text)
+  const [copiedRaw, setCopiedRaw] = useState(false)
+  const [copiedFineTuned, setCopiedFineTuned] = useState(false)
 
   const handleSaveEdit = () => {
     const updated = { ...transcript, text: editedText }
@@ -23,55 +27,135 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
     onEdit?.(editedText)
   }
 
+  const handleCopy = async (text: string, type: "raw" | "finetuned") => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (type === "raw") {
+        setCopiedRaw(true)
+        setTimeout(() => setCopiedRaw(false), 2000)
+      } else {
+        setCopiedFineTuned(true)
+        setTimeout(() => setCopiedFineTuned(false), 2000)
+      }
+    } catch (err) {
+      console.error("Failed to copy text:", err)
+    }
+  }
+
+  const hasFinetuned = Boolean(transcript.fineTunedText)
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">Transcription</h3>
-          <div className="text-xs text-muted-foreground">
-            {transcript.provider} · {transcript.model}
+    <div className="space-y-8 w-full max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        {onBack && (
+          <Button 
+            onClick={onBack} 
+            variant="ghost" 
+            className="group -ml-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            New Recording
+          </Button>
+        )}
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider bg-secondary/50 px-3 py-1 rounded-full">
+          {transcript.provider} · {transcript.model}
+        </div>
+      </div>
+
+      <div className={cn("grid gap-8", hasFinetuned ? "lg:grid-cols-2" : "grid-cols-1")}>
+        {/* Raw Transcription */}
+        <div className="space-y-4 flex flex-col">
+          <div className="flex items-center justify-between border-b border-border/40 pb-2">
+            <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+              {hasFinetuned ? "Original" : "Transcription"}
+            </h3>
+            <div className="flex gap-1">
+              <Button
+                onClick={() => setIsEditing(!isEditing)}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                title="Edit"
+              >
+                <PenLine className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => handleCopy(transcript.text, "raw")}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                title="Copy"
+              >
+                {copiedRaw ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           </div>
+
+          {isEditing ? (
+            <div className="flex-1 space-y-4">
+              <textarea
+                value={editedText}
+                onChange={(e) => setEditedText(e.target.value)}
+                className="w-full h-[300px] p-4 rounded-xl border border-border bg-background resize-none focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button onClick={() => setIsEditing(false)} variant="ghost">Cancel</Button>
+                <Button onClick={handleSaveEdit}>Save Changes</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 p-6 rounded-2xl bg-secondary/20 border border-border/50 text-lg leading-relaxed font-light text-foreground/90 whitespace-pre-wrap">
+              {transcript.text}
+            </div>
+          )}
         </div>
 
-        {isEditing ? (
-          <textarea
-            value={editedText}
-            onChange={(e) => setEditedText(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground min-h-32 resize-none"
-          />
-        ) : (
-          <div className="bg-secondary rounded-lg p-4 min-h-32 whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {transcript.text}
+        {/* Fine-tuned Transcription */}
+        {hasFinetuned && (
+          <div className="space-y-4 flex flex-col">
+            <div className="flex items-center justify-between border-b border-primary/20 pb-2">
+              <h3 className="font-medium text-sm text-primary uppercase tracking-wide flex items-center gap-2">
+                <Sparkles className="w-3 h-3" />
+                Refined
+              </h3>
+              <Button
+                onClick={() => handleCopy(transcript.fineTunedText!, "finetuned")}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-primary/70 hover:text-primary hover:bg-primary/10"
+                title="Copy"
+              >
+                {copiedFineTuned ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex-1 p-6 rounded-2xl bg-primary/5 border border-primary/10 text-lg leading-relaxed font-normal text-foreground whitespace-pre-wrap shadow-sm">
+              {transcript.fineTunedText}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2">
-        {isEditing ? (
-          <>
-            <Button onClick={() => setIsEditing(false)} variant="outline" className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit} className="flex-1">
-              Save
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button onClick={() => setIsEditing(true)} variant="outline" className="flex-1">
-              Edit
-            </Button>
-            <Button onClick={onFinetune} className="flex-1">
-              Fine-tune
-            </Button>
-          </>
-        )}
-      </div>
-
-      {onBack && (
-        <Button onClick={onBack} variant="ghost" className="w-full">
-          ← Start over
-        </Button>
+      {/* Footer Actions */}
+      {!hasFinetuned && !isEditing && (
+        <div className="flex justify-center pt-8">
+          <Button 
+            onClick={onFinetune} 
+            size="lg" 
+            className="rounded-full px-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Refine with AI
+          </Button>
+        </div>
       )}
     </div>
   )

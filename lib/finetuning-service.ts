@@ -175,3 +175,55 @@ export async function fineTuneTranscript(
   saveFinetuning(finetune)
   return { finetune }
 }
+
+/**
+ * Fine-tune transcript text directly (for auto fine-tune feature)
+ */
+export async function fineTuneText(
+  text: string,
+  customSystemPrompt?: string,
+): Promise<{ fineTunedText?: string; success: boolean; error?: string }> {
+  const settings = getSettings()
+
+  const provider = getProvider(settings.selectedProvider || "")
+  if (!provider) {
+    return { success: false, error: "Provider not configured" }
+  }
+
+  if (!settings.selectedFinetuneModel) {
+    return { success: false, error: "Fine-tune model not configured" }
+  }
+
+  const systemPrompt = customSystemPrompt || settings.customSystemPrompt
+
+  let finetunedResult
+  switch (settings.selectedProvider) {
+    case "openai":
+      finetunedResult = await fineTuneWithOpenAI(
+        provider.apiKey,
+        text,
+        systemPrompt,
+        settings.selectedFinetuneModel,
+      )
+      break
+    case "groq":
+      finetunedResult = await fineTuneWithGroq(
+        provider.apiKey,
+        text,
+        systemPrompt,
+        settings.selectedFinetuneModel,
+      )
+      break
+    case "assemblyai":
+      finetunedResult = await fineTuneWithAssemblyAI(provider.apiKey, text, systemPrompt)
+      break
+    default:
+      return { success: false, error: "Unknown provider" }
+  }
+
+  if (!finetunedResult.success) {
+    return { success: false, error: finetunedResult.error }
+  }
+
+  return { success: true, fineTunedText: finetunedResult.text }
+}

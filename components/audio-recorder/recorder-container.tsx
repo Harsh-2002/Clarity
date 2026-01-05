@@ -1,16 +1,84 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { RecorderControls } from "./recorder-controls"
-import { AudioUpload } from "./audio-upload"
+import { AudioRecorder } from "@/lib/audio-recorder"
+import type { RecordingState } from "@/lib/audio-recorder"
+import { AudioVisualizer } from "./audio-visualizer"
+import { Mic, Upload, Square, Pause, Play, X } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { PROVIDER_CONFIGS } from "@/lib/providers"
+import { getSettings } from "@/lib/storage"
 
 interface RecorderContainerProps {
   onAudioReady: (blob: Blob, fileName: string, duration: number) => void
 }
 
 export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
-  const [mode, setMode] = useState<"choose" | "record" | "upload">("choose")
+  const [recorder, setRecorder] = useState<AudioRecorder | null>(null)
+  const [recordingState, setRecordingState] = useState<RecordingState>({
+    isRecording: false,
+    isPaused: false,
+    duration: 0,
+    audioBlob: null,
+  })
+  const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setRecorder(new AudioRecorder())
+  }, [])
+
+  useEffect(() => {
+    if (!recordingState.isRecording || recordingState.isPaused) return
+
+    const interval = setInterval(() => {
+      setRecordingState((prev) => ({
+        ...prev,
+        duration: prev.duration + 1,
+      }))
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [recordingState.isRecording, recordingState.isPaused])
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+  }
+
+  const handleStartRecording = async () => {
+    setError(null)
+    try {
+      await recorder?.startRecording(setRecordingState, setFrequencyData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start recording")
+    }
+  }
+
+  const handlePauseResume = () => {
+    if (recordingState.isPaused) {
+      recorder?.resumeRecording()
+    } else {
+      recorder?.pauseRecording()
+    }
+  }
+
+  const handleStopRecording = async () => {
+    if (!recorder) return
+
+    const audioBlob = await recorder.stopRecording()
+    handleRecordingComplete(audioBlob, recordingState.duration)
+    setRecordingState({
+      isRecording: false,
+      isPaused: false,
+      duration: 0,
+      audioBlob: null,
+    })
+    setFrequencyData(null)
+  }
 
   const handleRecordingComplete = (blob: Blob, duration: number) => {
     const timestamp = new Date().toLocaleTimeString().replace(/:/g, "-")
@@ -18,40 +86,121 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     onAudioReady(blob, fileName, duration)
   }
 
-  const handleFileSelected = (blob: Blob, fileName: string) => {
-    onAudioReady(blob, fileName, 0)
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null)
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    const settings = getSettings()
+    const provider = settings.selectedProvider
+    const providerConfig = provider ? PROVIDER_CONFIGS[provider] : null
+
+    if (!providerConfig) {
+      setError("Provider not configured")
+      return
+    }
+
+    // Validate file size (soft check, chunking handles larger files)
+    // We'll just warn if it's huge, but let it pass to the chunker
+    
+    // Validate file type
+    const fileType = file.type.split("/")[1]
+    // Basic check, but we can be lenient as the service handles most
+    
+    onAudioReady(file, file.name, 0)
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {mode === "choose" && (
-        <div className="flex gap-3 flex-col">
-          <Button onClick={() => setMode("record")} size="lg" className="w-full">
-            Record Audio
-          </Button>
-          <Button onClick={() => setMode("upload")} variant="outline" size="lg" className="w-full">
-            Upload File
-          </Button>
+    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto min-h-[400px] relative">
+      
+      {/* Error Message */}
+      {error && (
+        <div className="absolute top-0 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-4">
+          <div className="bg-destructive/10 text-destructive text-sm px-4 py-2 rounded-full inline-block">
+            {error}
+          </div>
         </div>
       )}
 
-      {mode === "record" && (
-        <>
-          <Button onClick={() => setMode("choose")} variant="ghost" className="w-full">
-            ← Back
-          </Button>
-          <RecorderControls onRecordingComplete={handleRecordingComplete} />
-        </>
-      )}
+      {/* Main Interaction Area */}
+      <div className="relative z-10 flex flex-col items-center gap-8 transition-all duration-500">
+        
+        {recordingState.isRecording ? (
+          // Active Recording State
+          <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in-95 duration-300">
+            <div className="text-6xl font-light tracking-tighter tabular-nums text-foreground/80">
+              {formatTime(recordingState.duration)}
+            </div>
+            
+            <div className="h-32 w-full flex items-center justify-center">
+               <AudioVisualizer frequencyData={frequencyData} isRecording={true} />
+            </div>
 
-      {mode === "upload" && (
-        <>
-          <Button onClick={() => setMode("choose")} variant="ghost" className="w-full">
-            ← Back
-          </Button>
-          <AudioUpload onFileSelected={handleFileSelected} />
-        </>
-      )}
+            <div className="flex items-center gap-6">
+              <Button
+                onClick={handlePauseResume}
+                variant="outline"
+                size="icon"
+                className="h-14 w-14 rounded-full border-2 hover:bg-secondary transition-all"
+              >
+                {recordingState.isPaused ? (
+                  <Play className="w-6 h-6 fill-current" />
+                ) : (
+                  <Pause className="w-6 h-6 fill-current" />
+                )}
+              </Button>
+              
+              <Button
+                onClick={handleStopRecording}
+                variant="destructive"
+                size="icon"
+                className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all"
+              >
+                <Square className="w-6 h-6 fill-current" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          // Idle State
+          <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in-95 duration-300">
+            <button
+              onClick={handleStartRecording}
+              className="group relative flex items-center justify-center h-32 w-32 rounded-full bg-primary text-primary-foreground shadow-xl transition-all hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-primary/20"
+            >
+              <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-30 duration-1000" />
+              <Mic className="w-12 h-12" />
+            </button>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-medium tracking-tight">Tap to Record</h2>
+              <p className="text-muted-foreground text-sm">
+                or{" "}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-primary hover:underline underline-offset-4 font-medium"
+                >
+                  upload an audio file
+                </button>
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hidden File Input */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="audio/*" 
+        onChange={handleFileSelect} 
+        className="hidden" 
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { MinimalNav, MobileNav } from "@/components/minimal-nav"
 
 import { Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
 
@@ -11,7 +12,7 @@ import { Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
 const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
 
 export const metadata: Metadata = {
-  title: "Audio Transcription App",
+  title: "Clarity",
   description: "Transcribe audio with AI and fine-tune results",
   generator: "v0.app",
   icons: {
@@ -40,9 +41,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <MinimalNav />
+          <div className="md:pl-16 min-h-screen transition-all duration-300">
+            {children}
+          </div>
+          <MobileNav />
           <Analytics />
         </ThemeProvider>
       </body>

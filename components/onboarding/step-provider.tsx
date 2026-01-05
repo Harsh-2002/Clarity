@@ -26,9 +26,9 @@ export function StepProvider() {
                 selectedProvider === provider.id ? "border-primary bg-secondary" : "border-border hover:border-primary"
               }`}
             >
-              <div className="font-semibold">{provider.name}</div>
+              <div className="font-semibold text-lg">{provider.name}</div>
               <div className="text-sm text-muted-foreground mt-1">
-                Max size: {(provider.limits.maxFileSize / 1024 / 1024).toFixed(0)} MB
+                Supports {provider.limits.supportedFormats.join(", ")} formats
               </div>
             </button>
           ))}

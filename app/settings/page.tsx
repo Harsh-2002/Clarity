@@ -2,21 +2,29 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Download, Upload, Trash2, SettingsIcon } from "lucide-react"
+import { Download, Upload, Trash2, SettingsIcon, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getSettings, exportAllData, importData, clearAllData, getProvider, saveSettings } from "@/lib/storage"
-import type { AppSettings } from "@/lib/types"
+import { getSettings, exportAllData, importData, clearAllData, getProvider, saveSettings, saveProvider } from "@/lib/storage"
+import { fetchAvailableModels } from "@/lib/providers"
+import type { AppSettings, ProviderConfig } from "@/lib/types"
 
 export default function SettingsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [isOnboarded, setIsOnboarded] = useState(false)
-  const [provider, setProvider] = useState<any>(null)
+  const [provider, setProvider] = useState<ProviderConfig | null>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  
+  // Model selection states
+  const [availableTranscriptionModels, setAvailableTranscriptionModels] = useState<string[]>([])
+  const [availableFinetuneModels, setAvailableFinetuneModels] = useState<string[]>([])
+  const [selectedTranscriptionModel, setSelectedTranscriptionModel] = useState<string>("")
+  const [selectedFinetuneModel, setSelectedFinetuneModel] = useState<string>("")
+  const [autoFineTune, setAutoFineTune] = useState(false)
+  const [isFetchingModels, setIsFetchingModels] = useState(false)
 
   useEffect(() => {
     const appSettings = getSettings()
@@ -25,11 +33,39 @@ export default function SettingsPage() {
     } else {
       setIsOnboarded(true)
       setSettings(appSettings)
+      setSelectedTranscriptionModel(appSettings.selectedTranscriptionModel || "")
+      setSelectedFinetuneModel(appSettings.selectedFinetuneModel || "")
+      setAutoFineTune(appSettings.autoFineTune || false)
       if (appSettings.selectedProvider) {
-        setProvider(getProvider(appSettings.selectedProvider))
+        const prov = getProvider(appSettings.selectedProvider)
+        setProvider(prov)
+        // Fetch available models
+        if (prov) {
+          fetchModels(appSettings.selectedProvider, prov.apiKey)
+        }
       }
     }
   }, [router])
+
+  const fetchModels = async (providerId: string, apiKey: string) => {
+    setIsFetchingModels(true)
+    const { models } = await fetchAvailableModels(providerId, apiKey)
+    
+    let transcriptionModels = models
+    let finetuneModels = models
+
+    if (providerId === "openai") {
+      transcriptionModels = models.filter((m) => m.includes("whisper"))
+      finetuneModels = models.filter((m) => m.includes("gpt"))
+    } else if (providerId === "groq") {
+      transcriptionModels = models.filter((m) => m.includes("whisper"))
+      finetuneModels = models
+    }
+
+    setAvailableTranscriptionModels(transcriptionModels)
+    setAvailableFinetuneModels(finetuneModels)
+    setIsFetchingModels(false)
+  }
 
   useEffect(() => {
     if (feedback) {
@@ -37,6 +73,20 @@ export default function SettingsPage() {
       return () => clearTimeout(timer)
     }
   }, [feedback])
+
+  const handleSaveModelSettings = () => {
+    if (!settings) return
+    
+    const updatedSettings: AppSettings = {
+      ...settings,
+      selectedTranscriptionModel,
+      selectedFinetuneModel,
+      autoFineTune,
+    }
+    saveSettings(updatedSettings)
+    setSettings(updatedSettings)
+    setFeedback({ type: "success", message: "Settings saved successfully" })
+  }
 
   const handleExportData = async () => {
     setIsExporting(true)
@@ -95,10 +145,6 @@ export default function SettingsPage() {
   }
 
   const handleResetProvider = () => {
-    setShowResetConfirm(true)
-  }
-
-  const confirmResetProvider = () => {
     const currentSettings = getSettings()
     const updatedSettings = {
       ...currentSettings,
@@ -109,7 +155,6 @@ export default function SettingsPage() {
       customSystemPrompt: "",
     }
     saveSettings(updatedSettings)
-    setShowResetConfirm(false)
     router.push("/onboarding")
   }
 
@@ -119,153 +164,177 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <SettingsIcon className="w-8 h-8" />
-              <h1 className="text-4xl font-bold">Settings</h1>
-            </div>
-            <p className="text-muted-foreground">Manage your configuration and data</p>
-          </div>
-
-          {/* Feedback Messages */}
-          {feedback && (
-            <div
-              className={`rounded-lg border p-4 flex items-center gap-3 animate-in fade-in ${
-                feedback.type === "success"
-                  ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
-                  : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
-              }`}
-            >
-              <div className="w-2 h-2 rounded-full bg-current" />
-              <p className="text-sm font-medium">{feedback.message}</p>
-            </div>
-          )}
-
-          {/* Provider Configuration */}
-          <div className="border border-border rounded-lg p-6 space-y-4">
-            <h2 className="text-xl font-semibold">Provider Configuration</h2>
-            <p className="text-sm text-muted-foreground">Your current transcription setup</p>
-
-            {provider && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Provider</p>
-                  <p className="text-lg font-medium">{provider.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Transcription Model
-                  </p>
-                  <p className="text-lg font-medium">{settings.selectedTranscriptionModel}</p>
-                </div>
-                {settings.selectedFinetuneModel && (
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Fine-tune Model
-                    </p>
-                    <p className="text-lg font-medium">{settings.selectedFinetuneModel}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Button onClick={handleResetProvider} variant="outline" className="w-full sm:w-auto bg-transparent">
-              Reconfigure Provider
-            </Button>
-          </div>
-
-          {/* Data Management */}
-          <div className="border border-border rounded-lg p-6 space-y-4">
-            <h2 className="text-xl font-semibold">Data Management</h2>
-            <p className="text-sm text-muted-foreground">
-              All data is encrypted locally and never shared with external servers. Export your data as a backup.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                onClick={handleExportData}
-                variant="outline"
-                disabled={isExporting}
-                className="flex items-center gap-2 bg-transparent"
-              >
-                <Download className="w-4 h-4" />
-                {isExporting ? "Exporting..." : "Export Data"}
-              </Button>
-              <Button
-                onClick={handleImportData}
-                variant="outline"
-                disabled={isImporting}
-                className="flex items-center gap-2 bg-transparent"
-              >
-                <Upload className="w-4 h-4" />
-                {isImporting ? "Importing..." : "Import Data"}
-              </Button>
-            </div>
-
-            <div className="mt-4 p-3 bg-secondary rounded-lg text-xs text-muted-foreground space-y-1">
-              <p className="font-medium">Backup Information:</p>
-              <p>Your backup includes all transcripts, settings, API keys (encrypted), and preferences.</p>
-              <p>Keep backups in a safe location for data recovery.</p>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="border border-destructive/20 rounded-lg p-6 space-y-4 bg-destructive/5">
-            <h2 className="text-xl font-semibold text-destructive flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              Danger Zone
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Irreversible actions. Please export your data before proceeding.
-            </p>
-
-            <Button onClick={handleClearData} variant="destructive" className="w-full sm:w-auto">
-              Delete All Data
-            </Button>
-          </div>
-
-          {showResetConfirm && (
-            <div className="border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950 rounded-lg p-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-yellow-900 dark:text-yellow-200">Reset Provider Configuration?</h3>
-                <p className="text-sm text-yellow-800 dark:text-yellow-300 mt-1">
-                  You'll need to complete the onboarding process again to set up your provider.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={() => setShowResetConfirm(false)} variant="outline" className="flex-1">
-                  Cancel
-                </Button>
-                <Button onClick={confirmResetProvider} variant="destructive" className="flex-1">
-                  Reset
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {showClearConfirm && (
-            <div className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 rounded-lg p-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-red-900 dark:text-red-200">Delete All Data?</h3>
-                <p className="text-sm text-red-800 dark:text-red-300 mt-1">
-                  This will permanently delete all your transcripts and settings. This action cannot be undone. Please
-                  make sure you've exported your data as a backup.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={() => setShowClearConfirm(false)} variant="outline" className="flex-1">
-                  Cancel
-                </Button>
-                <Button onClick={confirmClearData} variant="destructive" className="flex-1">
-                  Delete Everything
-                </Button>
-              </div>
-            </div>
-          )}
+      <div className="max-w-3xl mx-auto px-4 py-12 space-y-12">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-light tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">Manage your configuration and data</p>
         </div>
+
+        {/* Feedback Messages */}
+        {feedback && (
+          <div
+            className={`rounded-lg border p-4 flex items-center gap-3 animate-in fade-in ${
+              feedback.type === "success"
+                ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
+                : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+            }`}
+          >
+            <div className="w-2 h-2 rounded-full bg-current" />
+            <p className="text-sm font-medium">{feedback.message}</p>
+          </div>
+        )}
+
+        {/* Provider Configuration */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-border/40 pb-4">
+            <h2 className="text-xl font-light">Provider Configuration</h2>
+            <Button onClick={handleResetProvider} variant="ghost" className="text-muted-foreground hover:text-foreground">
+              Reconfigure
+            </Button>
+          </div>
+
+          {provider && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Transcription Model</label>
+                  <select
+                    value={selectedTranscriptionModel}
+                    onChange={(e) => setSelectedTranscriptionModel(e.target.value)}
+                    className="w-full px-3 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none rounded-none"
+                    disabled={isFetchingModels}
+                  >
+                    <option value="">Select model</option>
+                    {availableTranscriptionModels.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Fine-tuning Model</label>
+                  <select
+                    value={selectedFinetuneModel}
+                    onChange={(e) => setSelectedFinetuneModel(e.target.value)}
+                    className="w-full px-3 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none rounded-none"
+                    disabled={isFetchingModels}
+                  >
+                    <option value="">Select model</option>
+                    {availableFinetuneModels.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">Auto Fine-tune</p>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically refine transcripts after recording
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAutoFineTune(!autoFineTune)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    autoFineTune ? "bg-primary" : "bg-secondary"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-background shadow-sm transition-transform ${
+                      autoFineTune ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button onClick={handleSaveModelSettings} className="px-8">
+                  Save Changes
+                </Button>
+                <Button
+                  onClick={() => provider && fetchModels(provider.id, provider.apiKey)}
+                  variant="ghost"
+                  disabled={isFetchingModels}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isFetchingModels ? "animate-spin" : ""}`} />
+                  Refresh Models
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Data Management */}
+        <section className="space-y-6">
+          <div className="border-b border-border/40 pb-4">
+            <h2 className="text-xl font-light">Data Management</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button
+              onClick={handleExportData}
+              variant="outline"
+              disabled={isExporting}
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-secondary/50 border-border/40"
+            >
+              <Download className="w-6 h-6 mb-1" />
+              <span className="font-medium">Export Data</span>
+              <span className="text-xs text-muted-foreground font-normal">Backup your transcripts</span>
+            </Button>
+            <Button
+              onClick={handleImportData}
+              variant="outline"
+              disabled={isImporting}
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-secondary/50 border-border/40"
+            >
+              <Upload className="w-6 h-6 mb-1" />
+              <span className="font-medium">Import Data</span>
+              <span className="text-xs text-muted-foreground font-normal">Restore from backup</span>
+            </Button>
+          </div>
+        </section>
+
+        {/* Danger Zone */}
+        <section className="space-y-6 pt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-light text-destructive">Danger Zone</h2>
+          </div>
+
+          {!showClearConfirm ? (
+            <Button 
+              onClick={handleClearData} 
+              variant="ghost" 
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start px-0"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete all data
+            </Button>
+          ) : (
+            <div className="bg-destructive/5 rounded-lg p-6 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div>
+                <h3 className="font-medium text-destructive">Are you sure?</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This will permanently delete all your transcripts and settings. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowClearConfirm(false)} variant="outline">
+                  Cancel
+                </Button>
+                <Button onClick={confirmClearData} variant="destructive">
+                  Yes, delete everything
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )

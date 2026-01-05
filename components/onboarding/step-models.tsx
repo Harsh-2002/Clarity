@@ -2,13 +2,17 @@
 
 import { Button } from "@/components/ui/button"
 import { useOnboarding } from "./onboarding-context"
-import { PROVIDER_CONFIGS } from "@/lib/providers"
 
 export function StepModels() {
-  const { setStep, selectedProvider, transcriptionModel, setTranscriptionModel, finetuneModel, setFinetuneModel } =
-    useOnboarding()
-
-  const providerConfig = selectedProvider ? PROVIDER_CONFIGS[selectedProvider] : null
+  const {
+    setStep,
+    transcriptionModel,
+    setTranscriptionModel,
+    finetuneModel,
+    setFinetuneModel,
+    availableTranscriptionModels,
+    availableFinetuneModels,
+  } = useOnboarding()
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
@@ -27,7 +31,15 @@ export function StepModels() {
               className="w-full px-3 py-2 border border-border rounded-lg bg-background"
             >
               <option value="">Select model</option>
-              <option value={providerConfig?.models.transcription}>{providerConfig?.models.transcription}</option>
+              {availableTranscriptionModels.length > 0 ? (
+                availableTranscriptionModels.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))
+              ) : (
+                <option disabled>No transcription models available</option>
+              )}
             </select>
           </div>
 
@@ -39,7 +51,15 @@ export function StepModels() {
               className="w-full px-3 py-2 border border-border rounded-lg bg-background"
             >
               <option value="">Skip fine-tuning</option>
-              <option value={providerConfig?.models.fineTuning}>{providerConfig?.models.fineTuning}</option>
+              {availableFinetuneModels.length > 0 ? (
+                availableFinetuneModels.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))
+              ) : (
+                <option disabled>No fine-tuning models available</option>
+              )}
             </select>
           </div>
         </div>

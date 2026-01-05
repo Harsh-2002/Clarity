@@ -4,12 +4,21 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useOnboarding } from "./onboarding-context"
-import { PROVIDER_CONFIGS, validateApiKey } from "@/lib/providers"
+import { PROVIDER_CONFIGS, validateApiKey, fetchAvailableModels } from "@/lib/providers"
 import { saveProvider } from "@/lib/storage"
 import type { ProviderConfig } from "@/lib/types"
 
 export function StepApiKey() {
-  const { setStep, selectedProvider, apiKey, setApiKey } = useOnboarding()
+  const {
+    setStep,
+    selectedProvider,
+    apiKey,
+    setApiKey,
+    setAvailableTranscriptionModels,
+    setAvailableFinetuneModels,
+    setTranscriptionModel,
+    setFinetuneModel,
+  } = useOnboarding()
   const [isValidating, setIsValidating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showKey, setShowKey] = useState(false)
@@ -31,6 +40,45 @@ export function StepApiKey() {
       setError(validation.error || "Invalid API key")
       setIsValidating(false)
       return
+    }
+
+    // Fetch available models
+    const { models, error: modelsError } = await fetchAvailableModels(selectedProvider, apiKey)
+
+    if (modelsError || models.length === 0) {
+      setError(modelsError || "Could not fetch available models")
+      setIsValidating(false)
+      return
+    }
+
+    // Separate transcription and fine-tuning models based on provider
+    let transcriptionModels = models
+    let finetuneModels = models
+
+    if (selectedProvider === "openai") {
+      transcriptionModels = models.filter((m) => m.includes("whisper"))
+      finetuneModels = models.filter((m) => m.includes("gpt"))
+    } else if (selectedProvider === "groq") {
+      transcriptionModels = models.filter((m) => m.includes("whisper"))
+      finetuneModels = models
+    }
+
+    setAvailableTranscriptionModels(transcriptionModels)
+    setAvailableFinetuneModels(finetuneModels)
+
+    // Set default models
+    if (selectedProvider === "groq") {
+      const defaultTranscription = transcriptionModels.find((m) => m.includes("whisper-large-v3")) || transcriptionModels[0]
+      const defaultFinetune = finetuneModels.find((m) => m.includes("llama-3.1-8b-instant")) || finetuneModels[0]
+
+      if (defaultTranscription) setTranscriptionModel(defaultTranscription)
+      if (defaultFinetune) setFinetuneModel(defaultFinetune)
+    } else if (selectedProvider === "openai") {
+      const defaultTranscription = transcriptionModels.find((m) => m === "whisper-1") || transcriptionModels[0]
+      const defaultFinetune = finetuneModels.find((m) => m.includes("gpt-4o-mini")) || finetuneModels[0]
+
+      if (defaultTranscription) setTranscriptionModel(defaultTranscription)
+      if (defaultFinetune) setFinetuneModel(defaultFinetune)
     }
 
     // Save provider configuration
@@ -62,11 +110,12 @@ export function StepApiKey() {
                 setApiKey(e.target.value)
                 setError(null)
               }}
-              className={error ? "border-destructive" : ""}
+              className={`pr-16 ${error ? "border-destructive" : ""}`}
             />
             <button
+              type="button"
               onClick={() => setShowKey(!showKey)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {showKey ? "Hide" : "Show"}
             </button>

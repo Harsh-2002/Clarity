@@ -73,6 +73,7 @@ export function getSettings(): AppSettings {
     selectedTranscriptionModel: null,
     selectedFinetuneModel: null,
     customSystemPrompt: "",
+    autoFineTune: false,
     encryptionDerived: false,
     theme: "system",
     onboardingComplete: false,

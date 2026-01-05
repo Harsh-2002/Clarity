@@ -36,41 +36,38 @@ export default function TranscriptsPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="flex items-center justify-center min-h-screen px-4 py-8">
-        <div className="w-full max-w-2xl space-y-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Transcripts</h1>
-            <p className="text-muted-foreground">View and manage all your transcriptions</p>
-          </div>
+      <div className="max-w-3xl mx-auto px-4 py-12 space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-light tracking-tight">History</h1>
+          <p className="text-muted-foreground">Your past transcriptions</p>
+        </div>
 
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 border-b border-border/40">
           <Input
             placeholder="Search transcripts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-secondary"
+            className="bg-secondary/50 border-transparent focus:bg-background transition-all"
           />
+        </div>
 
+        <div className="space-y-4">
           {filteredTranscripts.length > 0 ? (
-            <div className="space-y-3">
-              {filteredTranscripts.map((transcript) => (
-                <TranscriptCard key={transcript.id} transcript={transcript} onDelete={handleDelete} />
-              ))}
-            </div>
+            filteredTranscripts.map((transcript) => (
+              <TranscriptCard key={transcript.id} transcript={transcript} onDelete={handleDelete} />
+            ))
           ) : (
-            <div className="bg-secondary rounded-lg p-8 text-center space-y-3">
-              <p className="text-muted-foreground">{searchQuery ? "No transcripts found" : "No transcripts yet"}</p>
-              <Button onClick={() => router.push("/transcribe")}>Create your first transcript</Button>
+            <div className="text-center py-12 text-muted-foreground">
+              {searchQuery ? "No matching transcripts found" : "No transcripts yet"}
+              {!searchQuery && (
+                <div className="mt-4">
+                  <Button onClick={() => router.push("/transcribe")} variant="outline">
+                    Start Recording
+                  </Button>
+                </div>
+              )}
             </div>
           )}
-
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <Button onClick={() => router.push("/transcribe")} variant="outline" className="flex-1">
-              New Transcript
-            </Button>
-            <Button onClick={() => router.push("/settings")} variant="outline" className="flex-1">
-              Settings
-            </Button>
-          </div>
         </div>
       </div>
     </main>
