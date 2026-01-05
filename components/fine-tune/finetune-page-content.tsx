@@ -50,6 +50,21 @@ export function FinetunedPageContent() {
     }
   }, [isOnboarded, isInitialized, transcriptId])
 
+  // Keyboard shortcut: Ctrl/Cmd+Enter to start finetuning
+  useEffect(() => {
+    if (state !== "input") return
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault()
+        handleStartFinetuning()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [state, handleStartFinetuning])
+
   const handleStartFinetuning = useCallback(async () => {
     if (!transcript) return
 
@@ -111,12 +126,12 @@ export function FinetunedPageContent() {
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               placeholder="Add specific instructions for refinement (e.g., 'Make it more concise', 'Fix grammar only')..."
-              className="w-full px-0 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none min-h-[100px] resize-none text-lg font-light placeholder:text-muted-foreground/50"
+              className="w-full px-4 py-3 border border-border rounded-2xl bg-transparent focus:border-foreground transition-colors outline-none min-h-[100px] resize-none text-base font-light placeholder:text-muted-foreground/50"
             />
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button onClick={handleStartFinetuning} className="px-8 h-12 text-base rounded-full">
+            <Button onClick={handleStartFinetuning} className="px-8 h-12 text-base">
               Start Refinement
             </Button>
           </div>

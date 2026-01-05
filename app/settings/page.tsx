@@ -202,7 +202,7 @@ export default function SettingsPage() {
                   <select
                     value={selectedTranscriptionModel}
                     onChange={(e) => setSelectedTranscriptionModel(e.target.value)}
-                    className="w-full px-3 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none rounded-none"
+                    className="w-full px-4 py-2 border border-border rounded-full bg-background focus:border-foreground transition-colors outline-none"
                     disabled={isFetchingModels}
                   >
                     <option value="">Select model</option>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                   <select
                     value={selectedFinetuneModel}
                     onChange={(e) => setSelectedFinetuneModel(e.target.value)}
-                    className="w-full px-3 py-2 border-b border-border bg-transparent focus:border-foreground transition-colors outline-none rounded-none"
+                    className="w-full px-4 py-2 border border-border rounded-full bg-background focus:border-foreground transition-colors outline-none"
                     disabled={isFetchingModels}
                   >
                     <option value="">Select model</option>

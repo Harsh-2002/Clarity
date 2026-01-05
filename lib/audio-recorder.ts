@@ -14,6 +14,10 @@ export class AudioRecorder {
   private startTime = 0
   private pausedTime = 0
   private chunks: Blob[] = []
+  private vadTimer: NodeJS.Timeout | null = null
+  private lastVoiceTime = 0
+  private silenceThreshold = 30 // Average volume threshold for silence
+  private silenceDuration = 3000 // 3 seconds of silence to trigger pause
 
   private onStateChange: ((state: RecordingState) => void) | null = null
   private onVisualize: ((data: Uint8Array) => void) | null = null
@@ -51,6 +55,7 @@ export class AudioRecorder {
       this.mediaRecorder.start()
       this.startTime = Date.now()
       this.pausedTime = 0
+      this.lastVoiceTime = Date.now() // Initialize voice time
 
       this.onStateChange?.({
         isRecording: true,
@@ -132,6 +137,19 @@ export class AudioRecorder {
     const dataArray = new Uint8Array(this.analyser.frequencyBinCount)
     this.analyser.getByteFrequencyData(dataArray)
     this.onVisualize?.(dataArray)
+
+    // Voice Activity Detection
+    const average = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length
+    
+    if (average > this.silenceThreshold) {
+      this.lastVoiceTime = Date.now()
+    } else {
+      // Check if we've been silent for too long
+      if (Date.now() - this.lastVoiceTime > this.silenceDuration && this.mediaRecorder?.state === "recording") {
+        console.log("[VAD] Auto-pausing due to silence")
+        this.pauseRecording()
+      }
+    }
 
     if (this.mediaRecorder?.state === "recording") {
       this.animationId = requestAnimationFrame(() => this.visualize())

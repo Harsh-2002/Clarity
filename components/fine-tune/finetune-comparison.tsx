@@ -80,7 +80,7 @@ export function FinetuneComparison({ finetune, onAccept, onReject, onRetry }: Fi
         <Button onClick={onRetry} variant="ghost" className="flex-1">
           Try Again
         </Button>
-        <Button onClick={onAccept} className="flex-1 rounded-full">
+        <Button onClick={onAccept} className="flex-1">
           Save Changes
         </Button>
       </div>

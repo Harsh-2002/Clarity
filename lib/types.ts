@@ -31,6 +31,8 @@ export interface Transcript {
   model: string
   createdAt: number
   audio?: Blob
+  tags?: string[]
+  isDraft?: boolean
 }
 
 export interface FinetuneRequest {

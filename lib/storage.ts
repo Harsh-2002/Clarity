@@ -192,3 +192,47 @@ export function clearAllData(): void {
   })
   encryptionKey = null
 }
+
+export function deleteTranscript(id: string): void {
+  const transcripts = getTranscripts().filter((t) => t.id !== id)
+  const key = getEncryptionKey()
+  const encrypted = transcripts.map((t) => {
+    const { audio, ...rest } = t
+    return encryptData(rest, key)
+  })
+  localStorage.setItem(STORAGE_KEYS.transcripts, JSON.stringify(encrypted))
+}
+
+// Auto-save draft during transcription
+export function saveDraft(audioBlob: Blob, duration: number): string {
+  const draftId = `draft-${Date.now()}`
+  const draft = {
+    id: draftId,
+    audioBlob,
+    duration,
+    timestamp: Date.now(),
+  }
+  sessionStorage.setItem('transcription-draft', JSON.stringify({
+    id: draftId,
+    duration,
+    timestamp: draft.timestamp,
+  }))
+  
+  // Store blob separately (blobs can't be stringified)
+  return draftId
+}
+
+export function getDraft(): { id: string; duration: number; timestamp: number } | null {
+  const stored = sessionStorage.getItem('transcription-draft')
+  if (!stored) return null
+  
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return null
+  }
+}
+
+export function clearDraft(): void {
+  sessionStorage.removeItem('transcription-draft')
+}

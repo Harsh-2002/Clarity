@@ -28,7 +28,7 @@ export function StepModels() {
             <select
               value={transcriptionModel}
               onChange={(e) => setTranscriptionModel(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+              className="w-full px-4 py-2 border border-border rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="">Select model</option>
               {availableTranscriptionModels.length > 0 ? (
@@ -48,7 +48,7 @@ export function StepModels() {
             <select
               value={finetuneModel}
               onChange={(e) => setFinetuneModel(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+              className="w-full px-4 py-2 border border-border rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option value="">Skip fine-tuning</option>
               {availableFinetuneModels.length > 0 ? (

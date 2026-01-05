@@ -24,20 +24,85 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
   })
   const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showDurationWarning, setShowDurationWarning] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setRecorder(new AudioRecorder())
   }, [])
 
+  // Lock orientation to landscape on mobile when recording
+  useEffect(() => {
+    if (!recordingState.isRecording) return
+
+    const lockOrientation = async () => {
+      try {
+        if (screen.orientation && screen.orientation.lock && window.innerWidth < 768) {
+          await screen.orientation.lock("landscape").catch(() => {
+            // Orientation lock might fail, that's OK
+            console.log("[Orientation] Lock not supported or permission denied")
+          })
+        }
+      } catch (err) {
+        // Silently fail - not all browsers support this
+      }
+    }
+
+    const unlockOrientation = () => {
+      try {
+        if (screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock()
+        }
+      } catch (err) {
+        // Silently fail
+      }
+    }
+
+    lockOrientation()
+
+    return () => {
+      unlockOrientation()
+    }
+  }, [recordingState.isRecording])
+
+  // Keyboard shortcut: Spacebar to start/stop recording
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      
+      if (e.code === "Space") {
+        e.preventDefault()
+        if (recordingState.isRecording) {
+          handleStopRecording()
+        } else {
+          handleStartRecording()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [recordingState.isRecording])
+
   useEffect(() => {
     if (!recordingState.isRecording || recordingState.isPaused) return
 
     const interval = setInterval(() => {
-      setRecordingState((prev) => ({
-        ...prev,
-        duration: prev.duration + 1,
-      }))
+      setRecordingState((prev) => {
+        const newDuration = prev.duration + 1
+        
+        // Show warning at 30 minutes (1800 seconds)
+        if (newDuration === 1800) {
+          setShowDurationWarning(true)
+          setTimeout(() => setShowDurationWarning(false), 5000)
+        }
+        
+        return {
+          ...prev,
+          duration: newDuration,
+        }
+      })
     }, 1000)
 
     return () => clearInterval(interval)
@@ -124,6 +189,15 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
         <div className="absolute top-0 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-4">
           <div className="bg-destructive/10 text-destructive text-sm px-4 py-2 rounded-full inline-block">
             {error}
+          </div>
+        </div>
+      )}
+
+      {/* Duration Warning */}
+      {showDurationWarning && (
+        <div className="absolute top-16 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm px-4 py-2 rounded-full inline-block">
+            ⏱️ 30 minutes reached – Consider stopping soon
           </div>
         </div>
       )}

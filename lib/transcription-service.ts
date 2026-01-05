@@ -2,6 +2,7 @@ import type { Transcript } from "./types"
 import { getProvider, saveTranscript, getSettings } from "./storage"
 import { chunkAudio, mergeChunkTranscriptions } from "./audio-chunker"
 import { PROVIDER_CONFIGS } from "./providers"
+import { retryWithBackoff, isRetryableError, getActionableErrorMessage } from "./retry"
 
 async function transcribeWithOpenAI(
   apiKey: string,
@@ -9,26 +10,38 @@ async function transcribeWithOpenAI(
   model: string,
 ): Promise<{ text: string; success: boolean; error?: string }> {
   try {
-    const formData = new FormData()
-    formData.append("file", audioBlob, "audio.webm")
-    formData.append("model", model)
+    const result = await retryWithBackoff(
+      async () => {
+        const formData = new FormData()
+        formData.append("file", audioBlob, "audio.webm")
+        formData.append("model", model)
 
-    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+        const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const error: any = new Error("OpenAI transcription failed")
+          error.status = response.status
+          throw error
+        }
+
+        const data = await response.json()
+        return { text: data.text, success: true }
       },
-      body: formData,
-    })
-
-    if (!response.ok) {
-      return { text: "", success: false, error: "OpenAI transcription failed" }
-    }
-
-    const data = await response.json()
-    return { text: data.text, success: true }
+      { shouldRetry: isRetryableError }
+    )
+    return result
   } catch (error) {
-    return { text: "", success: false, error: error instanceof Error ? error.message : "Unknown error" }
+    return { 
+      text: "", 
+      success: false, 
+      error: getActionableErrorMessage(error, "transcription")
+    }
   }
 }
 
@@ -38,26 +51,38 @@ async function transcribeWithGroq(
   model: string,
 ): Promise<{ text: string; success: boolean; error?: string }> {
   try {
-    const formData = new FormData()
-    formData.append("file", audioBlob, "audio.webm")
-    formData.append("model", model)
+    const result = await retryWithBackoff(
+      async () => {
+        const formData = new FormData()
+        formData.append("file", audioBlob, "audio.webm")
+        formData.append("model", model)
 
-    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+        const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const error: any = new Error("Groq transcription failed")
+          error.status = response.status
+          throw error
+        }
+
+        const data = await response.json()
+        return { text: data.text, success: true }
       },
-      body: formData,
-    })
-
-    if (!response.ok) {
-      return { text: "", success: false, error: "Groq transcription failed" }
-    }
-
-    const data = await response.json()
-    return { text: data.text, success: true }
+      { shouldRetry: isRetryableError }
+    )
+    return result
   } catch (error) {
-    return { text: "", success: false, error: error instanceof Error ? error.message : "Unknown error" }
+    return { 
+      text: "", 
+      success: false, 
+      error: getActionableErrorMessage(error, "transcription")
+    }
   }
 }
 

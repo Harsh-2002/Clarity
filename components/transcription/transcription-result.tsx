@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, PenLine, Sparkles, ArrowLeft } from "lucide-react"
+import { Copy, Check, PenLine, Sparkles, ArrowLeft, Tag as TagIcon } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { saveTranscript } from "@/lib/storage"
 import { cn } from "@/lib/utils"
+import { TagSelector } from "../transcript-list/tag-selector"
 
 interface TranscriptionResultProps {
   transcript: Transcript
@@ -19,6 +20,27 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
   const [editedText, setEditedText] = useState(transcript.text)
   const [copiedRaw, setCopiedRaw] = useState(false)
   const [copiedFineTuned, setCopiedFineTuned] = useState(false)
+  const [tags, setTags] = useState<string[]>(transcript.tags || [])
+
+  // AI-suggested tags based on content keywords
+  const suggestedTags = (() => {
+    const text = (transcript.fineTunedText || transcript.text).toLowerCase()
+    const suggestions: string[] = []
+    
+    if (/(meeting|call|discuss|agenda|zoom)/i.test(text)) suggestions.push("meeting")
+    if (/(idea|concept|think|consider)/i.test(text)) suggestions.push("idea")
+    if (/(todo|task|need to|should|must)/i.test(text)) suggestions.push("todo")
+    if (/(reminder|remember|don't forget)/i.test(text)) suggestions.push("reminder")
+    if (/(project|work|client)/i.test(text)) suggestions.push("project")
+    
+    return suggestions
+  })()
+
+  const handleTagsChange = (newTags: string[]) => {
+    setTags(newTags)
+    const updated = { ...transcript, tags: newTags }
+    saveTranscript(updated)
+  }
 
   const handleSaveEdit = () => {
     const updated = { ...transcript, text: editedText }
@@ -63,6 +85,11 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
         </div>
       </div>
 
+      {/* Tags */}
+      <div className="border-t border-b border-border/40 py-4">
+        <TagSelector tags={tags} onChange={handleTagsChange} suggestions={suggestedTags} />
+      </div>
+
       <div className={cn("grid gap-8", hasFinetuned ? "lg:grid-cols-2" : "grid-cols-1")}>
         {/* Raw Transcription */}
         <div className="space-y-4 flex flex-col">
@@ -101,7 +128,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
               <textarea
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
-                className="w-full h-[300px] p-4 rounded-xl border border-border bg-background resize-none focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full h-[300px] p-4 rounded-2xl border border-border bg-background resize-none focus:ring-2 focus:ring-primary/20 outline-none transition-all"
               />
               <div className="flex gap-2 justify-end">
                 <Button onClick={() => setIsEditing(false)} variant="ghost">Cancel</Button>
@@ -150,7 +177,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
           <Button 
             onClick={onFinetune} 
             size="lg" 
-            className="rounded-full px-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+            className="px-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Refine with AI

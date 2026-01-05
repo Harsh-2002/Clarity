@@ -2,16 +2,20 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, CheckSquare, Square } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 interface TranscriptCardProps {
   transcript: Transcript
   onDelete?: (id: string) => void
+  selectionMode?: boolean
+  isSelected?: boolean
+  onToggleSelect?: () => void
 }
 
-export function TranscriptCard({ transcript, onDelete }: TranscriptCardProps) {
+export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected, onToggleSelect }: TranscriptCardProps) {
   const router = useRouter()
   const date = new Date(transcript.createdAt).toLocaleDateString()
   const [copiedRaw, setCopiedRaw] = useState(false)
@@ -34,8 +38,27 @@ export function TranscriptCard({ transcript, onDelete }: TranscriptCardProps) {
   }
 
   return (
-    <div className="group relative p-6 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-all duration-300 border border-transparent hover:border-border/50">
-      <div className="space-y-4">
+    <div 
+      className={cn(
+        "group relative p-6 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-all duration-300 border",
+        selectionMode && isSelected 
+          ? "border-primary bg-primary/5" 
+          : "border-transparent hover:border-border/50"
+      )}
+      onClick={selectionMode ? onToggleSelect : undefined}
+      role={selectionMode ? "button" : undefined}
+    >
+      {selectionMode && (
+        <div className="absolute top-3 left-3 z-10">
+          {isSelected ? (
+            <CheckSquare className="w-5 h-5 text-primary" />
+          ) : (
+            <Square className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+      )}
+      
+      <div className={cn("space-y-4", selectionMode && "ml-8")}>
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{date}</p>
           {hasFinetuned && (
