@@ -23,17 +23,17 @@ export function MinimalNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "p-3 rounded-xl transition-all duration-300 group relative",
+              "p-3 rounded-full transition-all duration-300 group relative",
               isActive
                 ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 hover:scale-105"
             )}
           >
             <item.icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
             <span className="sr-only">{item.label}</span>
             
             {/* Tooltip */}
-            <div className="absolute left-full ml-4 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-sm border border-border">
+            <div className="absolute left-full ml-4 px-3 py-1.5 bg-popover text-popover-foreground text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-sm border border-border">
               {item.label}
             </div>
           </Link>

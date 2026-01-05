@@ -25,7 +25,9 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
   const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showDurationWarning, setShowDurationWarning] = useState(false)
+  const [isHoldingSpace, setIsHoldingSpace] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setRecorder(new AudioRecorder())
@@ -65,25 +67,61 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     }
   }, [recordingState.isRecording])
 
-  // Keyboard shortcut: Spacebar to start/stop recording
+  // Keyboard shortcut: Spacebar to start/stop recording (with hold-to-record support)
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.repeat) return // Ignore key repeat events
       
       if (e.code === "Space") {
         e.preventDefault()
-        if (recordingState.isRecording) {
-          handleStopRecording()
-        } else {
+        
+        if (!recordingState.isRecording && !isHoldingSpace) {
+          setIsHoldingSpace(true)
+          
+          // Start recording immediately on press
           handleStartRecording()
+          
+          // Set a timeout - if they hold for more than 500ms, it's "hold mode"
+          holdTimeoutRef.current = setTimeout(() => {
+            // They're holding it - recording will continue until release
+          }, 500)
         }
       }
     }
 
-    window.addEventListener("keydown", handleKeyPress)
-    return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [recordingState.isRecording])
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      
+      if (e.code === "Space" && isHoldingSpace) {
+        e.preventDefault()
+        setIsHoldingSpace(false)
+        
+        // Clear the hold timeout
+        if (holdTimeoutRef.current) {
+          clearTimeout(holdTimeoutRef.current)
+          holdTimeoutRef.current = null
+        }
+        
+        // Stop recording when spacebar is released
+        if (recordingState.isRecording) {
+          handleStopRecording()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current)
+      }
+    }
+  }, [recordingState.isRecording, isHoldingSpace])
 
   useEffect(() => {
     if (!recordingState.isRecording || recordingState.isPaused) return
@@ -202,6 +240,15 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
         </div>
       )}
 
+      {/* Hold-to-Record Indicator */}
+      {isHoldingSpace && recordingState.isRecording && (
+        <div className="absolute bottom-4 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-primary/10 text-primary text-sm px-4 py-2 rounded-full inline-block border border-primary/20">
+            🎙️ Release spacebar to stop
+          </div>
+        </div>
+      )}
+
       {/* Main Interaction Area */}
       <div className="relative z-10 flex flex-col items-center gap-8 transition-all duration-500">
         
@@ -261,6 +308,9 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
                 >
                   upload an audio file
                 </button>
+              </p>
+              <p className="text-muted-foreground/60 text-xs pt-2">
+                <kbd className="px-2 py-1 rounded bg-secondary border border-border text-xs font-mono">Space</kbd> to hold & record
               </p>
             </div>
           </div>
