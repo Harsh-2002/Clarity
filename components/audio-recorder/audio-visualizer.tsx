@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 
 interface AudioVisualizerProps {
@@ -11,65 +11,90 @@ interface AudioVisualizerProps {
 export function AudioVisualizer({ frequencyData, isRecording }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { theme } = useTheme()
-  const peaksRef = useRef<number[]>([])
-  const [, forceUpdate] = useState(0)
+  const animationRef = useRef<number>()
+  const smoothedDataRef = useRef<number[]>([])
 
   useEffect(() => {
-    if (!canvasRef.current || !frequencyData) return
+    if (!canvasRef.current) return
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Initialize peaks array if needed
-    if (peaksRef.current.length !== frequencyData.length) {
-      peaksRef.current = new Array(frequencyData.length).fill(0)
-    }
+    const draw = () => {
+      // Clear canvas with transparent background
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    const bgColor = theme === "dark" ? "rgb(20, 20, 20)" : "rgb(245, 245, 245)"
-    const barColor = theme === "dark" ? "rgb(59, 130, 246)" : "rgb(59, 130, 246)"
-    const peakColor = theme === "dark" ? "rgb(239, 68, 68)" : "rgb(239, 68, 68)"
-
-    ctx.fillStyle = bgColor
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    const barWidth = canvas.width / frequencyData.length
-    ctx.shadowBlur = 4
-
-    for (let i = 0; i < frequencyData.length; i++) {
-      const normalizedFreq = frequencyData[i] / 255
-      const barHeight = normalizedFreq * canvas.height * 0.95
-
-      // Update peak hold
-      if (barHeight > peaksRef.current[i]) {
-        peaksRef.current[i] = barHeight
-      } else {
-        // Decay peaks slowly
-        peaksRef.current[i] = Math.max(0, peaksRef.current[i] - 1)
+      if (!frequencyData || !isRecording) {
+        // Draw idle center line
+        const centerY = canvas.height / 2
+        ctx.strokeStyle = theme === "dark" ? "rgba(59, 130, 246, 0.2)" : "rgba(59, 130, 246, 0.3)"
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(0, centerY)
+        ctx.lineTo(canvas.width, centerY)
+        ctx.stroke()
+        return
       }
 
-      // Draw main bar
-      ctx.fillStyle = barColor
-      ctx.shadowColor = theme === "dark" ? "rgba(59, 130, 246, 0.5)" : "rgba(59, 130, 246, 0.3)"
-      ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1.5, barHeight)
-
-      // Draw peak indicator
-      if (peaksRef.current[i] > 5) {
-        ctx.fillStyle = peakColor
-        ctx.shadowColor = "transparent"
-        ctx.fillRect(
-          i * barWidth,
-          canvas.height - peaksRef.current[i] - 2,
-          barWidth - 1.5,
-          2
-        )
+      const centerY = canvas.height / 2
+      const sliceWidth = canvas.width / frequencyData.length
+      
+      // Initialize smoothed data array if needed
+      if (smoothedDataRef.current.length !== frequencyData.length) {
+        smoothedDataRef.current = Array.from(frequencyData)
       }
+      
+      // Apply smoothing to reduce jitter
+      const smoothingFactor = 0.3
+      for (let i = 0; i < frequencyData.length; i++) {
+        smoothedDataRef.current[i] = smoothedDataRef.current[i] * (1 - smoothingFactor) + frequencyData[i] * smoothingFactor
+      }
+      
+      // Draw smooth waveform using time-domain data
+      ctx.lineWidth = 2.5
+      ctx.strokeStyle = theme === "dark" ? "rgb(59, 130, 246)" : "rgb(59, 130, 246)"
+      ctx.lineCap = "round"
+      ctx.lineJoin = "round"
+      
+      ctx.beginPath()
+      
+      for (let i = 0; i < frequencyData.length; i++) {
+        const x = i * sliceWidth
+        
+        // Use smoothed data and increase amplitude significantly
+        const normalizedValue = (smoothedDataRef.current[i] - 128) / 128.0
+        const amplitudeScale = canvas.height * 0.4 // Use 80% of canvas height (40% each direction)
+        const y = centerY + (normalizedValue * amplitudeScale)
+        
+        if (i === 0) {
+          ctx.moveTo(x, y)
+        } else {
+          ctx.lineTo(x, y)
+        }
+      }
+      
+      ctx.stroke()
+
+      animationRef.current = requestAnimationFrame(draw)
     }
 
-    ctx.shadowColor = "transparent"
+    draw()
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
   }, [frequencyData, isRecording, theme])
 
   return (
-    <canvas ref={canvasRef} width={400} height={80} className="w-full border border-border rounded-lg bg-secondary" />
+    <canvas 
+      ref={canvasRef} 
+      width={400} 
+      height={120} 
+      className="w-full rounded-2xl" 
+      style={{ background: 'transparent' }}
+    />
   )
 }

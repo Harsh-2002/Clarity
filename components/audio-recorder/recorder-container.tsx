@@ -26,6 +26,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
   const [error, setError] = useState<string | null>(null)
   const [showDurationWarning, setShowDurationWarning] = useState(false)
   const [isHoldingSpace, setIsHoldingSpace] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -255,8 +256,72 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     }
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    setError(null)
+
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+
+    const settings = getSettings()
+    const provider = settings.selectedProvider
+    const providerConfig = provider ? PROVIDER_CONFIGS[provider] : null
+
+    if (!providerConfig) {
+      setError("Provider not configured")
+      return
+    }
+
+    // Validate file type and size
+    const fileExtension = file.name.split('.').pop()?.toLowerCase()
+    const supportedFormats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+    
+    if (!fileExtension || !supportedFormats.includes(fileExtension)) {
+      setError(`Unsupported format: .${fileExtension}. Supported: ${supportedFormats.join(', ')}`)
+      return
+    }
+
+    // Check file size (25MB limit)
+    const maxSize = 25 * 1024 * 1024
+    if (file.size > maxSize) {
+      setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 25MB.`)
+      return
+    }
+    
+    onAudioReady(file, file.name, 0)
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto min-h-[400px] relative">
+    <div 
+      className="flex flex-col items-center justify-center w-full max-w-md mx-auto min-h-[400px] relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag and Drop Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-3xl flex items-center justify-center animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex flex-col items-center gap-4">
+            <Upload className="w-16 h-16 text-primary animate-bounce" />
+            <p className="text-xl font-medium text-primary">Drop audio file here</p>
+            <p className="text-sm text-muted-foreground">Supported: mp3, wav, m4a, flac, ogg, webm</p>
+          </div>
+        </div>
+      )}
       
       {/* Error Message */}
       {error && (

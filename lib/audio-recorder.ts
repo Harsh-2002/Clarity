@@ -38,7 +38,8 @@ export class AudioRecorder {
 
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       this.analyser = this.audioContext.createAnalyser()
-      this.analyser.fftSize = 256
+      this.analyser.fftSize = 2048 // Larger FFT for smoother, slower animation
+      this.analyser.smoothingTimeConstant = 0.8 // Add smoothing (0-1, higher = smoother)
       this.microphone = this.audioContext.createMediaStreamSource(stream)
       this.microphone.connect(this.analyser)
 
@@ -135,11 +136,15 @@ export class AudioRecorder {
     if (!this.analyser) return
 
     const dataArray = new Uint8Array(this.analyser.frequencyBinCount)
-    this.analyser.getByteFrequencyData(dataArray)
+    this.analyser.getByteTimeDomainData(dataArray) // Use time domain for waveform
     this.onVisualize?.(dataArray)
+    
+    // Also get frequency data for VAD
+    const freqArray = new Uint8Array(this.analyser.frequencyBinCount)
+    this.analyser.getByteFrequencyData(freqArray)
 
-    // Voice Activity Detection
-    const average = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length
+    // Voice Activity Detection (use frequency data)
+    const average = freqArray.reduce((sum, val) => sum + val, 0) / freqArray.length
     
     if (average > this.silenceThreshold) {
       this.lastVoiceTime = Date.now()
