@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Download, Upload, Trash2, SettingsIcon, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getSettings, exportAllData, importData, clearAllData, getProvider, saveSettings, saveProvider } from "@/lib/storage"
+import { getSettings, exportAllData, importData, clearAllData, getProvider, saveSettings, saveProvider, getTranscripts } from "@/lib/storage"
 import { fetchAvailableModels } from "@/lib/providers"
 import type { AppSettings, ProviderConfig } from "@/lib/types"
 
@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [selectedFinetuneModel, setSelectedFinetuneModel] = useState<string>("")
   const [autoFineTune, setAutoFineTune] = useState(false)
   const [isFetchingModels, setIsFetchingModels] = useState(false)
+  const [dataSize, setDataSize] = useState<string>("")
 
   useEffect(() => {
     const appSettings = getSettings()
@@ -44,8 +45,26 @@ export default function SettingsPage() {
           fetchModels(appSettings.selectedProvider, prov.apiKey)
         }
       }
+      // Calculate data size
+      calculateDataSize()
     }
   }, [router])
+
+  const calculateDataSize = () => {
+    const data = exportAllData()
+    const json = JSON.stringify(data, null, 2)
+    const bytes = new Blob([json]).size
+    const kb = bytes / 1024
+    const mb = kb / 1024
+    
+    if (mb >= 1) {
+      setDataSize(`${mb.toFixed(2)} MB`)
+    } else if (kb >= 1) {
+      setDataSize(`${kb.toFixed(2)} KB`)
+    } else {
+      setDataSize(`${bytes} bytes`)
+    }
+  }
 
   const fetchModels = async (providerId: string, apiKey: string) => {
     setIsFetchingModels(true)
@@ -277,26 +296,43 @@ export default function SettingsPage() {
             <h2 className="text-xl font-light">Data Management</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
             <Button
               onClick={handleExportData}
               variant="outline"
               disabled={isExporting}
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-secondary/50 border-border/40"
+              className="w-full h-auto py-4 flex items-center justify-between hover:bg-secondary/50 border-border/40 group"
             >
-              <Download className="w-6 h-6 mb-1" />
-              <span className="font-medium">Export Data</span>
-              <span className="text-xs text-muted-foreground font-normal">Backup your transcripts</span>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Download className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">Export Data</div>
+                  <div className="text-xs text-muted-foreground font-normal">Backup your transcripts</div>
+                </div>
+              </div>
+              {dataSize && (
+                <div className="px-3 py-1 rounded-full bg-secondary text-xs font-mono text-muted-foreground">
+                  {dataSize}
+                </div>
+              )}
             </Button>
             <Button
               onClick={handleImportData}
               variant="outline"
               disabled={isImporting}
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-secondary/50 border-border/40"
+              className="w-full h-auto py-4 flex items-center justify-between hover:bg-secondary/50 border-border/40 group"
             >
-              <Upload className="w-6 h-6 mb-1" />
-              <span className="font-medium">Import Data</span>
-              <span className="text-xs text-muted-foreground font-normal">Restore from backup</span>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Upload className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">Import Data</div>
+                  <div className="text-xs text-muted-foreground font-normal">Restore from backup</div>
+                </div>
+              </div>
             </Button>
           </div>
         </section>

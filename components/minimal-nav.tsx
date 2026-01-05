@@ -29,7 +29,14 @@ export function MinimalNav() {
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 hover:scale-105"
             )}
           >
-            <item.icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+            <item.icon 
+              className={cn(
+                "w-6 h-6 transition-all duration-300",
+                isActive && "animate-pulse",
+                !isActive && "group-hover:scale-110 group-hover:rotate-6"
+              )} 
+              strokeWidth={isActive ? 2.5 : 2} 
+            />
             <span className="sr-only">{item.label}</span>
             
             {/* Tooltip */}
@@ -68,7 +75,13 @@ export function MobileNav() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon 
+                className={cn(
+                  "w-5 h-5 transition-transform duration-300",
+                  isActive && "scale-110"
+                )} 
+                strokeWidth={isActive ? 2.5 : 2} 
+              />
               <span className="sr-only">{item.label}</span>
             </Link>
           )
