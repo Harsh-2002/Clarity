@@ -29,67 +29,82 @@ export default function TranscribePage() {
   }, [router])
 
   const handleAudioReady = async (audioBlob: Blob, fileName: string) => {
+    // Prevent duplicate processing
+    if (state !== "input") return
+    
     setState("transcribing")
     setError(null)
 
-    const result = await transcribeAudio(audioBlob, fileName)
+    try {
+      const result = await transcribeAudio(audioBlob, fileName)
 
-    if (result.error) {
-      setError(result.error)
-      setState("error")
-      return
-    }
+      if (result.error) {
+        setError(result.error)
+        setState("error")
+        return
+      }
 
-    if (result.transcript) {
-      const settings = getSettings()
-      
-      // Auto fine-tune if enabled and model is configured
-      if (settings.autoFineTune && settings.selectedFinetuneModel) {
-        setState("finetuning")
+      if (result.transcript) {
+        const settings = getSettings()
         
-        const fineTuneResult = await fineTuneText(result.transcript.text)
-        
-        if (fineTuneResult.success && fineTuneResult.fineTunedText) {
-          console.log('[Clarity] Fine-tune result tags:', fineTuneResult.tags)
-          const updatedTranscript = {
-            ...result.transcript,
-            fineTunedText: fineTuneResult.fineTunedText,
-            tags: fineTuneResult.tags || result.transcript.tags, // Use AI tags if available
+        // Auto fine-tune if enabled and model is configured
+        if (settings.autoFineTune && settings.selectedFinetuneModel) {
+          setState("finetuning")
+          
+          const fineTuneResult = await fineTuneText(result.transcript.text)
+          
+          if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+            console.log('[Clarity] Fine-tune result tags:', fineTuneResult.tags)
+            const updatedTranscript = {
+              ...result.transcript,
+              fineTunedText: fineTuneResult.fineTunedText,
+              tags: fineTuneResult.tags || result.transcript.tags, // Use AI tags if available
+            }
+            console.log('[Clarity] Saving transcript with tags:', updatedTranscript.tags)
+            saveTranscript(updatedTranscript)
+            setTranscript(updatedTranscript)
+          } else {
+            // If fine-tuning fails, just show the raw transcript
+            setTranscript(result.transcript)
           }
-          console.log('[Clarity] Saving transcript with tags:', updatedTranscript.tags)
-          saveTranscript(updatedTranscript)
-          setTranscript(updatedTranscript)
         } else {
-          // If fine-tuning fails, just show the raw transcript
           setTranscript(result.transcript)
         }
-      } else {
-        setTranscript(result.transcript)
+        
+        setState("result")
       }
-      
-      setState("result")
+    } catch (err) {
+      console.error('[Clarity] Transcription error:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      setState("error")
     }
   }
 
   const handleFinetune = async () => {
-    if (!transcript) return
+    if (!transcript || state !== "result") return
 
-    setState("finetuning")
-    const fineTuneResult = await fineTuneText(transcript.text)
+    try {
+      setState("finetuning")
+      const fineTuneResult = await fineTuneText(transcript.text)
 
-    if (fineTuneResult.success && fineTuneResult.fineTunedText) {
-      console.log('[Clarity] Manual fine-tune tags:', fineTuneResult.tags)
-      const updatedTranscript = {
-        ...transcript,
-        fineTunedText: fineTuneResult.fineTunedText,
-        tags: fineTuneResult.tags || transcript.tags, // Update with AI tags
+      if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+        console.log('[Clarity] Manual fine-tune tags:', fineTuneResult.tags)
+        const updatedTranscript = {
+          ...transcript,
+          fineTunedText: fineTuneResult.fineTunedText,
+          tags: fineTuneResult.tags || transcript.tags, // Update with AI tags
+        }
+        console.log('[Clarity] Saving manually fine-tuned transcript with tags:', updatedTranscript.tags)
+        saveTranscript(updatedTranscript)
+        setTranscript(updatedTranscript)
+        setState("result")
+      } else {
+        setError(fineTuneResult.error || "Fine-tuning failed")
+        setState("error")
       }
-      console.log('[Clarity] Saving manually fine-tuned transcript with tags:', updatedTranscript.tags)
-      saveTranscript(updatedTranscript)
-      setTranscript(updatedTranscript)
-      setState("result")
-    } else {
-      setError(fineTuneResult.error || "Fine-tuning failed")
+    } catch (err) {
+      console.error('[Clarity] Fine-tuning error:', err)
+      setError(err instanceof Error ? err.message : 'Fine-tuning failed')
       setState("error")
     }
   }

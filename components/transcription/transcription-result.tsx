@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, PenLine, Sparkles, ArrowLeft, Tag as TagIcon } from "lucide-react"
+import { Copy, Check, PenLine, Sparkles, Tag as TagIcon } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { saveTranscript } from "@/lib/storage"
 import { cn } from "@/lib/utils"
