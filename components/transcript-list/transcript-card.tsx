@@ -20,8 +20,12 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   const date = new Date(transcript.createdAt).toLocaleDateString()
   const [copiedRaw, setCopiedRaw] = useState(false)
   const [copiedFineTuned, setCopiedFineTuned] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const hasFinetuned = Boolean(transcript.fineTunedText)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  const displayText = hasFinetuned ? transcript.fineTunedText : transcript.text
+  const isLongText = displayText.length > 300
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -85,9 +89,25 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
         </div>
 
         <div className="space-y-2">
-          <p className="text-base leading-relaxed font-light text-foreground/90 line-clamp-3">
-            {hasFinetuned ? transcript.fineTunedText : transcript.text}
-          </p>
+          <div className={cn(
+            "text-base leading-relaxed font-light text-foreground/90 whitespace-pre-wrap",
+            !isExpanded && "line-clamp-3",
+            isExpanded && "max-h-[60vh] overflow-y-auto"
+          )}>
+            {displayText}
+          </div>
+          
+          {isLongText && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
+              }}
+              className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+            >
+              {isExpanded ? "Show less" : "Read more"}
+            </button>
+          )}
           
           {/* Tags Display */}
           {transcript.tags && transcript.tags.length > 0 && (

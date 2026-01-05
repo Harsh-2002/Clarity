@@ -75,7 +75,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
   const hasFinetuned = Boolean(transcript.fineTunedText)
 
   return (
-    <div className="space-y-8 w-full max-w-4xl mx-auto">
+    <div className="space-y-8 w-full max-w-7xl mx-auto px-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider bg-secondary/50 px-3 py-1 rounded-full">
@@ -144,7 +144,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
               </div>
             </div>
           ) : (
-            <div className="flex-1 p-6 rounded-2xl bg-secondary/20 border border-border/50 text-lg leading-relaxed font-light text-foreground/90 whitespace-pre-wrap">
+            <div className="flex-1 p-6 rounded-2xl bg-secondary/20 border border-border/50 text-lg leading-relaxed font-light text-foreground/90 whitespace-pre-wrap max-h-[70vh] overflow-y-auto">
               {transcript.text}
             </div>
           )}
@@ -172,7 +172,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
                 )}
               </Button>
             </div>
-            <div className="flex-1 p-6 rounded-2xl bg-primary/5 border border-primary/10 text-lg leading-relaxed font-normal text-foreground whitespace-pre-wrap shadow-sm">
+            <div className="flex-1 p-6 rounded-2xl bg-primary/5 border border-primary/10 text-lg leading-relaxed font-normal text-foreground whitespace-pre-wrap shadow-sm max-h-[70vh] overflow-y-auto">
               {transcript.fineTunedText}
             </div>
           </div>

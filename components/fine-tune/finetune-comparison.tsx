@@ -56,17 +56,17 @@ export function FinetuneComparison({ finetune, onAccept, onReject, onRetry }: Fi
       )}
 
       {showSideBySide && (
-        <div className="grid grid-cols-2 gap-8">
-          <div className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original</h3>
-            <div className="text-sm leading-relaxed font-light whitespace-pre-wrap max-h-[60vh] overflow-y-auto pr-2">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-6 lg:gap-8">
+          <div className="space-y-3 opacity-60 hover:opacity-100 transition-opacity">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">Original</h3>
+            <div className="text-base lg:text-base leading-relaxed font-light whitespace-pre-wrap max-h-[70vh] overflow-y-auto pr-2 p-4 rounded-2xl bg-secondary/20 border border-border/50">
               {finetune.originalText}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <h3 className="text-xs font-medium text-primary uppercase tracking-wider">Refined</h3>
-            <div className="text-base leading-relaxed font-light whitespace-pre-wrap max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-3">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">Refined</h3>
+            <div className="text-base lg:text-lg leading-relaxed font-light whitespace-pre-wrap max-h-[70vh] overflow-y-auto pr-2 p-4 rounded-2xl bg-primary/5 border border-primary/10">
               {finetune.finetumedText}
             </div>
           </div>
