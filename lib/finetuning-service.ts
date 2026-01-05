@@ -1,6 +1,26 @@
 import type { FinetuneRequest } from "./types"
 import { getProvider, saveFinetuning, getSettings, getTranscripts } from "./storage"
 
+/**
+ * Parse tags from AI response in format "TAGS: tag1, tag2, tag3"
+ * Returns the text without tags and extracted tags array
+ */
+function parseTagsFromResponse(text: string): { cleanedText: string; tags: string[] } {
+  const tagRegex = /TAGS:\s*(.+?)(?:\n|$)/i
+  const match = text.match(tagRegex)
+  
+  if (match) {
+    const tagsString = match[1]
+    const tags = tagsString.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    const cleanedText = text.replace(tagRegex, '').trim()
+    console.log('[Clarity] Parsed tags:', tags, 'from:', tagsString)
+    return { cleanedText, tags }
+  }
+  
+  console.log('[Clarity] No tags found in response')
+  return { cleanedText: text, tags: [] }
+}
+
 async function fineTuneWithOpenAI(
   apiKey: string,
   originalText: string,
@@ -21,11 +41,11 @@ async function fineTuneWithOpenAI(
             role: "system",
             content:
               systemPrompt ||
-              "You are an expert transcription editor. Improve the provided transcription text for clarity, grammar, and coherence. Return only the improved text.",
+              "You are an expert transcription editor. Improve the provided transcription text for clarity, grammar, and coherence. After the improved text, on a new line, add relevant tags in the format: TAGS: tag1, tag2, tag3 (choose 2-5 tags from categories like: meeting, idea, todo, note, reminder, project, brainstorm, personal, work, urgent, review, decision, question, or suggest custom ones based on content).",
           },
           {
             role: "user",
-            content: `Please improve this transcription:\n\n${originalText}`,
+            content: `Please improve this transcription and suggest relevant tags:\n\n${originalText}`,
           },
         ],
         temperature: 0.3,
@@ -67,11 +87,11 @@ async function fineTuneWithGroq(
             role: "system",
             content:
               systemPrompt ||
-              "You are an expert transcription editor. Improve the provided transcription text for clarity, grammar, and coherence. Return only the improved text.",
+              "You are an expert transcription editor. Improve the provided transcription text for clarity, grammar, and coherence. After the improved text, on a new line, add relevant tags in the format: TAGS: tag1, tag2, tag3 (choose 2-5 tags from categories like: meeting, idea, todo, note, reminder, project, brainstorm, personal, work, urgent, review, decision, question, or suggest custom ones based on content).",
           },
           {
             role: "user",
-            content: `Please improve this transcription:\n\n${originalText}`,
+            content: `Please improve this transcription and suggest relevant tags:\n\n${originalText}`,
           },
         ],
         temperature: 0.3,
@@ -182,7 +202,7 @@ export async function fineTuneTranscript(
 export async function fineTuneText(
   text: string,
   customSystemPrompt?: string,
-): Promise<{ fineTunedText?: string; success: boolean; error?: string }> {
+): Promise<{ fineTunedText?: string; tags?: string[]; success: boolean; error?: string }> {
   const settings = getSettings()
 
   const provider = getProvider(settings.selectedProvider || "")
@@ -225,5 +245,8 @@ export async function fineTuneText(
     return { success: false, error: finetunedResult.error }
   }
 
-  return { success: true, fineTunedText: finetunedResult.text }
+  // Parse tags from AI response
+  const { cleanedText, tags } = parseTagsFromResponse(finetunedResult.text)
+
+  return { success: true, fineTunedText: cleanedText, tags }
 }

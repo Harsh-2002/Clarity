@@ -70,19 +70,19 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
     <div className="space-y-8 w-full max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        {onBack && (
-          <Button 
-            onClick={onBack} 
-            variant="ghost" 
-            className="group -ml-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-            New Recording
-          </Button>
-        )}
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider bg-secondary/50 px-3 py-1 rounded-full">
           {transcript.provider} · {transcript.model}
         </div>
+        {onBack && (
+          <Button 
+            onClick={onBack} 
+            variant="default"
+            size="sm"
+            className="shadow-sm"
+          >
+            Start New Session
+          </Button>
+        )}
       </div>
 
       {/* Tags */}

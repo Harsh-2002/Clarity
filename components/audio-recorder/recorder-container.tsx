@@ -75,7 +75,9 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       if (e.repeat) return // Ignore key repeat events
       
       if (e.code === "Space") {
+        // ALWAYS prevent default to stop page scroll
         e.preventDefault()
+        e.stopPropagation()
         
         if (!recordingState.isRecording && !isHoldingSpace) {
           setIsHoldingSpace(true)
@@ -96,6 +98,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       
       if (e.code === "Space" && isHoldingSpace) {
         e.preventDefault()
+        e.stopPropagation()
         setIsHoldingSpace(false)
         
         // Clear the hold timeout
@@ -242,8 +245,8 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
       {/* Hold-to-Record Indicator */}
       {isHoldingSpace && recordingState.isRecording && (
-        <div className="absolute bottom-4 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="bg-primary/10 text-primary text-sm px-4 py-2 rounded-full inline-block border border-primary/20">
+        <div className="absolute top-24 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-2 duration-200 z-20">
+          <div className="bg-primary/90 backdrop-blur-md text-primary-foreground text-sm font-medium px-6 py-3 rounded-full inline-block shadow-lg border border-primary">
             🎙️ Release spacebar to stop
           </div>
         </div>

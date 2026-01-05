@@ -2,16 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, FileText, Settings } from "lucide-react"
+import { CircleDot, Layers, Sliders } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MinimalNav() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/transcribe", icon: Mic, label: "Transcribe" },
-    { href: "/transcripts", icon: FileText, label: "History" },
-    { href: "/settings", icon: Settings, label: "Settings" },
+    { href: "/transcribe", icon: CircleDot, label: "Transcribe" },
+    { href: "/transcripts", icon: Layers, label: "History" },
+    { href: "/settings", icon: Sliders, label: "Settings" },
   ]
 
   return (
@@ -54,9 +54,9 @@ export function MobileNav() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/transcribe", icon: Mic, label: "Transcribe" },
-    { href: "/transcripts", icon: FileText, label: "History" },
-    { href: "/settings", icon: Settings, label: "Settings" },
+    { href: "/transcribe", icon: CircleDot, label: "Transcribe" },
+    { href: "/transcripts", icon: Layers, label: "History" },
+    { href: "/settings", icon: Sliders, label: "Settings" },
   ]
 
   return (

@@ -13,6 +13,7 @@ export default function TranscriptsPage() {
   const router = useRouter()
   const [transcripts, setTranscripts] = useState<Transcript[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [isOnboarded, setIsOnboarded] = useState(false)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -27,9 +28,21 @@ export default function TranscriptsPage() {
     }
   }, [router])
 
-  const filteredTranscripts = transcripts.filter((t) => t.text.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Get all unique tags from transcripts
+  const allTags = Array.from(
+    new Set(
+      transcripts.flatMap(t => t.tags || [])
+    )
+  ).sort()
+
+  const filteredTranscripts = transcripts.filter((t) => {
+    const matchesSearch = t.text.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesTag = !selectedTag || (t.tags && t.tags.includes(selectedTag))
+    return matchesSearch && matchesTag
+  })
 
   const handleDelete = (id: string) => {
+    deleteTranscript(id)
     setTranscripts((prev) => prev.filter((t) => t.id !== id))
   }
 
@@ -124,13 +137,43 @@ export default function TranscriptsPage() {
           </div>
         )}
 
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 border-b border-border/40">
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 border-b border-border/40 space-y-3">
           <Input
             placeholder="Search transcripts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-secondary/50 border-transparent focus:bg-background transition-all"
           />
+          
+          {/* Tag Filter */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-muted-foreground font-medium">Filter by tag:</span>
+              <button
+                onClick={() => setSelectedTag(null)}
+                className={`px-3 py-1 text-xs rounded-full transition-all ${
+                  !selectedTag
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                All
+              </button>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  className={`px-3 py-1 text-xs rounded-full transition-all ${
+                    selectedTag === tag
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

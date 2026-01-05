@@ -72,6 +72,20 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
           <p className="text-base leading-relaxed font-light text-foreground/90 line-clamp-3">
             {hasFinetuned ? transcript.fineTunedText : transcript.text}
           </p>
+          
+          {/* Tags Display */}
+          {transcript.tags && transcript.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {transcript.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary/90 border border-primary/20"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-2 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -81,7 +95,10 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
           
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => handleCopy(hasFinetuned ? transcript.fineTunedText! : transcript.text, hasFinetuned ? "finetuned" : "raw")}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCopy(hasFinetuned ? transcript.fineTunedText! : transcript.text, hasFinetuned ? "finetuned" : "raw")
+              }}
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0 hover:bg-background/50"
@@ -95,7 +112,10 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
             
             {!hasFinetuned && (
               <Button 
-                onClick={() => router.push(`/fine-tune?transcriptId=${transcript.id}`)} 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/fine-tune?transcriptId=${transcript.id}`)
+                }} 
                 variant="ghost" 
                 size="sm"
                 className="h-8 px-3 text-xs hover:bg-background/50"
@@ -105,7 +125,10 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
             )}
             
             <Button 
-              onClick={() => onDelete?.(transcript.id)} 
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete?.(transcript.id)
+              }} 
               variant="ghost" 
               size="sm" 
               className="h-8 px-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"

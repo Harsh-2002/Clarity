@@ -50,10 +50,13 @@ export default function TranscribePage() {
         const fineTuneResult = await fineTuneText(result.transcript.text)
         
         if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+          console.log('[Clarity] Fine-tune result tags:', fineTuneResult.tags)
           const updatedTranscript = {
             ...result.transcript,
             fineTunedText: fineTuneResult.fineTunedText,
+            tags: fineTuneResult.tags || result.transcript.tags, // Use AI tags if available
           }
+          console.log('[Clarity] Saving transcript with tags:', updatedTranscript.tags)
           saveTranscript(updatedTranscript)
           setTranscript(updatedTranscript)
         } else {
@@ -75,10 +78,13 @@ export default function TranscribePage() {
     const fineTuneResult = await fineTuneText(transcript.text)
 
     if (fineTuneResult.success && fineTuneResult.fineTunedText) {
+      console.log('[Clarity] Manual fine-tune tags:', fineTuneResult.tags)
       const updatedTranscript = {
         ...transcript,
         fineTunedText: fineTuneResult.fineTunedText,
+        tags: fineTuneResult.tags || transcript.tags, // Update with AI tags
       }
+      console.log('[Clarity] Saving manually fine-tuned transcript with tags:', updatedTranscript.tags)
       saveTranscript(updatedTranscript)
       setTranscript(updatedTranscript)
       setState("result")
