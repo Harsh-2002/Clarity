@@ -215,21 +215,104 @@ Lucide React with Notion-style minimalism
 
 ## Deployment
 
-### Vercel (Recommended)
+Clarity supports multiple deployment methods since all API calls happen client-side.
+
+### Option 1: Static Export (Recommended)
+
+Build static HTML/JS files and serve from any static host:
 
 ```bash
-npm i -g vercel
-vercel
+pnpm build
+# Output in ./out directory
 ```
 
-Or connect GitHub repository to Vercel dashboard.
+Deploy to:
+- **GitHub Pages**: Push `out/` to gh-pages branch
+- **Netlify**: Drag and drop `out/` folder or `netlify deploy --dir=out`
+- **Vercel**: `vercel --prod` (auto-detects static export)
+- **AWS S3**: `aws s3 sync out/ s3://your-bucket --acl public-read`
+- **Nginx/Apache**: Copy `out/` to web root (e.g., `/var/www/html`)
+- **Cloudflare Pages**: Connect repo or upload `out/`
 
-### Other Platforms
+Example with nginx:
+```nginx
+server {
+    listen 80;
+    server_name clarity.example.com;
+    root /var/www/clarity/out;
+    
+    location / {
+        try_files $uri $uri/ $uri.html /index.html;
+    }
+}
+```
 
-- **Netlify**: `netlify deploy`
-- **Self-hosted**: `pnpm build && pnpm start`
+Preview locally:
+```bash
+pnpm preview  # Uses npx serve
+```
 
-Environment: Node.js 18+
+### Option 2: Server Build (Node.js)
+
+For platforms that support Node.js:
+
+```bash
+pnpm build
+pnpm start  # Production server on port 3000
+```
+
+Deploy to:
+- **Vercel**: `vercel --prod`
+- **Railway**: Connect GitHub repo
+- **Render**: Add as web service
+- **DigitalOcean App Platform**: Connect repo
+- **Self-hosted VPS**: Use PM2 or systemd
+
+Example with PM2:
+```bash
+pm2 start npm --name "clarity" -- start
+pm2 save
+pm2 startup
+```
+
+### Option 3: Docker
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+EXPOSE 3000
+CMD ["pnpm", "start"]
+```
+
+Build and run:
+```bash
+docker build -t clarity .
+docker run -p 3000:3000 clarity
+```
+
+### CORS & Proxy Considerations
+
+If deploying behind a reverse proxy, API calls go directly from browser to provider APIs (OpenAI/Groq/AssemblyAI). No proxy configuration needed.
+
+For custom proxy (optional):
+```nginx
+location /api/openai/ {
+    proxy_pass https://api.openai.com/;
+    proxy_set_header Authorization $http_authorization;
+}
+```
+
+All deployment methods work since:
+- No server-side API routes
+- No environment variables required
+- All data stored in browser localStorage
+- API keys never touch your server
+
+Recommended: Static export for simplicity and cost-effectiveness.
 
 ## Keyboard Shortcuts
 

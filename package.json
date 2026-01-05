@@ -5,9 +5,11 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:static": "next build && next export",
     "dev": "next dev --port 3000 --hostname 0.0.0.0",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "preview": "pnpm build && npx serve out"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
