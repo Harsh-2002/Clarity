@@ -330,7 +330,10 @@ export default function NovelEditor({
                         handleDrop: (view, event, _slice, moved) =>
                             handleImageDrop(view, event, moved, imageUpload),
                         handlePaste: (view, event, _slice) =>
-                            handleImagePaste(view, event, imageUpload)
+                            handleImagePaste(view, event, imageUpload),
+                        handleDOMEvents: {
+                            keydown: (_view, event) => handleCommandNavigation(event)
+                        }
                     }}
                     className={cn(
                         // Base prose styling

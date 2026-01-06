@@ -93,17 +93,7 @@ export default function NotesPage() {
   const createNewNote = useCallback(() => {
     const initialContent = JSON.stringify({
       type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 1 },
-          content: [{ type: "text", text: "New Note" }]
-        },
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "Start writing..." }]
-        }
-      ]
+      content: [{ type: "paragraph" }]
     })
     const newNote: Note = {
       id: Date.now().toString(),
