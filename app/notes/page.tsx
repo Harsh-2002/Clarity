@@ -39,7 +39,6 @@ export default function NotesPage() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [content, setContent] = useState<string>("")
   const [mounted, setMounted] = useState(false)
-  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit")
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
@@ -126,16 +125,13 @@ export default function NotesPage() {
         } else if (e.key === 'k') {
           e.preventDefault()
           document.getElementById('search-input')?.focus()
-        } else if (e.key === 'e' && selectedNote) {
-          e.preventDefault()
-          setViewMode(viewMode === "edit" ? "preview" : "edit")
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [viewMode, selectedNote, createNewNote])
+  }, [createNewNote])
 
   const deleteNote = (id: string) => {
     const updatedNotes = notes.filter((n) => n.id !== id)
@@ -257,20 +253,295 @@ export default function NotesPage() {
     downloadAnchorNode.remove()
   }
 
-  const exportNoteAsPDF = (note: Note) => {
-    // Select note and switch to preview
+  const exportNoteAsPDF = async (note: Note) => {
+    // Select note if not already selected
     if (selectedNote?.id !== note.id) {
       setSelectedNote(note)
       try {
         setContent(note.content)
       } catch { }
     }
-    setViewMode("preview")
 
-    // Allow render then print
-    setTimeout(() => {
-      window.print()
-    }, 100)
+    // Wait for content to render
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // Get the editor content element
+    const editorElement = document.querySelector('.ProseMirror')
+    if (!editorElement) {
+      console.error('Editor element not found')
+      return
+    }
+
+    // Create a clone for PDF generation
+    const clone = editorElement.cloneNode(true) as HTMLElement
+
+    // Base styling for the document
+    clone.style.cssText = `
+      background: white !important;
+      color: #1a1a1a !important;
+      padding: 40px !important;
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-size: 11pt !important;
+      line-height: 1.7 !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    `
+
+    // ===== HEADINGS =====
+    clone.querySelectorAll('h1').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-size: 26pt !important;
+        font-weight: bold !important;
+        margin: 0 0 20pt 0 !important;
+        color: #111 !important;
+        border-bottom: 2pt solid #333 !important;
+        padding-bottom: 8pt !important;
+        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+      `
+    })
+    clone.querySelectorAll('h2').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-size: 18pt !important;
+        font-weight: bold !important;
+        margin: 24pt 0 12pt 0 !important;
+        color: #222 !important;
+        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+      `
+    })
+    clone.querySelectorAll('h3').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-size: 14pt !important;
+        font-weight: bold !important;
+        margin: 18pt 0 8pt 0 !important;
+        color: #333 !important;
+        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+      `
+    })
+    clone.querySelectorAll('h4, h5, h6').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-size: 12pt !important;
+        font-weight: bold !important;
+        margin: 14pt 0 6pt 0 !important;
+        color: #444 !important;
+        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+      `
+    })
+
+    // ===== PARAGRAPHS =====
+    clone.querySelectorAll('p').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        margin-bottom: 12pt !important;
+        color: #1a1a1a !important;
+        text-align: justify !important;
+      `
+    })
+
+    // ===== LISTS (Ordered & Unordered) =====
+    clone.querySelectorAll('ul').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        margin: 12pt 0 12pt 24pt !important;
+        padding-left: 0 !important;
+        list-style-type: disc !important;
+      `
+    })
+    clone.querySelectorAll('ol').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        margin: 12pt 0 12pt 24pt !important;
+        padding-left: 0 !important;
+        list-style-type: decimal !important;
+      `
+    })
+    clone.querySelectorAll('li').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        margin-bottom: 6pt !important;
+        color: #1a1a1a !important;
+      `
+    })
+
+    // ===== TASK LISTS =====
+    clone.querySelectorAll('ul[data-type="taskList"]').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        margin: 12pt 0 !important;
+        padding-left: 0 !important;
+        list-style: none !important;
+      `
+    })
+    clone.querySelectorAll('li[data-type="taskItem"]').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 8pt !important;
+        margin-bottom: 6pt !important;
+      `
+    })
+    clone.querySelectorAll('input[type="checkbox"]').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        width: 12pt !important;
+        height: 12pt !important;
+        margin-top: 2pt !important;
+      `
+    })
+
+    // ===== CODE BLOCKS =====
+    clone.querySelectorAll('pre').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        background: #f4f4f4 !important;
+        border: 1pt solid #ddd !important;
+        padding: 12pt !important;
+        border-radius: 4pt !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 9pt !important;
+        line-height: 1.5 !important;
+        overflow-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        margin: 12pt 0 !important;
+      `
+    })
+    clone.querySelectorAll('pre code').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        background: transparent !important;
+        padding: 0 !important;
+        font-size: inherit !important;
+      `
+    })
+
+    // ===== INLINE CODE =====
+    clone.querySelectorAll('code:not(pre code)').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        background: #f0f0f0 !important;
+        padding: 2pt 4pt !important;
+        border-radius: 3pt !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 10pt !important;
+        color: #c7254e !important;
+      `
+    })
+
+    // ===== BLOCKQUOTES =====
+    clone.querySelectorAll('blockquote').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        border-left: 4pt solid #ccc !important;
+        padding-left: 16pt !important;
+        margin: 16pt 0 !important;
+        color: #555 !important;
+        font-style: italic !important;
+        background: #fafafa !important;
+        padding: 12pt 12pt 12pt 16pt !important;
+      `
+    })
+
+    // ===== TABLES =====
+    clone.querySelectorAll('table').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 16pt 0 !important;
+        font-size: 10pt !important;
+      `
+    })
+    clone.querySelectorAll('th').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        background: #f5f5f5 !important;
+        border: 1pt solid #ddd !important;
+        padding: 8pt 12pt !important;
+        text-align: left !important;
+        font-weight: bold !important;
+        color: #333 !important;
+      `
+    })
+    clone.querySelectorAll('td').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        border: 1pt solid #ddd !important;
+        padding: 8pt 12pt !important;
+        color: #1a1a1a !important;
+      `
+    })
+
+    // ===== HORIZONTAL RULES =====
+    clone.querySelectorAll('hr').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        border: none !important;
+        border-top: 1pt solid #ccc !important;
+        margin: 24pt 0 !important;
+      `
+    })
+
+    // ===== LINKS =====
+    clone.querySelectorAll('a').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        color: #0066cc !important;
+        text-decoration: underline !important;
+      `
+    })
+
+    // ===== IMAGES =====
+    clone.querySelectorAll('img').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        max-width: 100% !important;
+        height: auto !important;
+        border-radius: 6pt !important;
+        margin: 12pt 0 !important;
+        display: block !important;
+      `
+    })
+
+    // ===== BOLD, ITALIC, STRIKETHROUGH =====
+    clone.querySelectorAll('strong, b').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-weight: bold !important;
+        color: inherit !important;
+      `
+    })
+    clone.querySelectorAll('em, i').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        font-style: italic !important;
+        color: inherit !important;
+      `
+    })
+    clone.querySelectorAll('s, del, strike').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        text-decoration: line-through !important;
+        color: inherit !important;
+      `
+    })
+
+    // ===== HIGHLIGHT/MARK =====
+    clone.querySelectorAll('mark').forEach(el => {
+      (el as HTMLElement).style.cssText = `
+        background: #ffeb3b !important;
+        padding: 1pt 2pt !important;
+        color: #000 !important;
+      `
+    })
+
+    // Create wrapper div with white background
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = 'background: white !important; padding: 0 !important;'
+    wrapper.appendChild(clone)
+
+    // Dynamic import html2pdf
+    const html2pdf = (await import('html2pdf.js')).default
+
+    // Generate PDF with optimized settings
+    const opt = {
+      margin: [15, 20, 15, 20],
+      filename: `${note.title || 'note'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }
+
+    html2pdf().set(opt).from(wrapper).save()
   }
 
   const importNoteFromJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -639,66 +910,36 @@ export default function NotesPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {/* Word Count */}
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full">
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full print:hidden">
                     <span>{wordCount} words</span>
                   </div>
-                  {/* View Mode Toggle (Segmented Control) */}
-                  <div className="flex items-center bg-secondary/50 rounded-full p-1 border border-border/50">
-                    <button
-                      onClick={() => setViewMode("edit")}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-                        viewMode === "edit"
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Pen className="w-3.5 h-3.5" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setViewMode("preview")}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-                        viewMode === "preview"
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      Preview
-                    </button>
-                  </div>
-
+                  {/* Export PDF Button */}
+                  <Button
+                    onClick={() => exportNoteAsPDF(selectedNote)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 rounded-full print:hidden"
+                    title="Export as PDF"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Export PDF</span>
+                  </Button>
                 </div>
                 {/* Theme Selector Removed */}
               </div>
             </div>
 
-            {/* Editor/Preview Area */}
+            {/* Editor Area */}
             <div className="flex-1 overflow-y-auto bg-background print:overflow-visible">
-              {viewMode === "edit" ? (
-                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl print:hidden">
-                  {/* Key forces re-render when switching notes to ensure clean editor state */}
-                  <NovelEditor
-                    key={`editor - ${selectedNote.id} `}
-                    content={content}
-                    onChange={updateNote}
-                    editable={true}
-                  />
-                </div>
-              ) : (
-                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl overflow-y-auto print:h-auto print:overflow-visible print:w-full print:max-w-none">
-                  <div className="notion-preview print:p-0 print:border-none print:shadow-none">
-                    <NovelEditor
-                      key={`preview - ${selectedNote.id} `}
-                      content={content}
-                      onChange={() => { }}
-                      editable={false}
-                    />
-                  </div>
-                </div>
-              )}
+              <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl print:max-w-none print:p-8">
+                {/* Key forces re-render when switching notes to ensure clean editor state */}
+                <NovelEditor
+                  key={`editor-${selectedNote.id}`}
+                  content={content}
+                  onChange={updateNote}
+                  editable={true}
+                />
+              </div>
             </div>
           </>
         ) : (
