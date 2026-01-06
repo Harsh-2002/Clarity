@@ -320,7 +320,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
           <div className="flex flex-col items-center gap-4">
             <Upload className="w-16 h-16 text-primary animate-bounce" />
             <p className="text-xl font-medium text-primary">Drop audio file here</p>
-            <p className="text-sm text-muted-foreground">Supported: mp3, wav, m4a, flac, ogg, webm</p>
+            <p className="text-sm text-muted-foreground">Supported: mp3, wav, m4a, mp4, flac, ogg, webm</p>
           </div>
         </div>
       )}

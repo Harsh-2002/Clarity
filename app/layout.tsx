@@ -6,11 +6,13 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { MinimalNav, MobileNav } from "@/components/minimal-nav"
 
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Playfair_Display, Lora } from 'next/font/google'
 
 // Initialize fonts
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
+const lora = Lora({ subsets: ['latin'], variable: '--font-lora' })
 
 export const metadata: Metadata = {
   title: "Clarity",
@@ -29,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${lora.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <MinimalNav />
           <div className="md:pl-16 min-h-screen transition-all duration-300">
