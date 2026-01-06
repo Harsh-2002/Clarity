@@ -397,7 +397,7 @@ export default function NovelEditor({
                         "[&_.ProseMirror_a]:underline-offset-4 [&_.ProseMirror_a]:decoration-primary/50",
 
                         // Images
-                        "[&_.ProseMirror_img]:rounded-lg [&_.ProseMirror_img]:border [&_.ProseMirror_img]:border-border [&_.ProseMirror_img]:my-6",
+                        "[&_.ProseMirror_img]:rounded-xl [&_.ProseMirror_img]:border [&_.ProseMirror_img]:border-border [&_.ProseMirror_img]:my-6",
 
                         // Placeholder styling
                         "[&_.ProseMirror_.is-empty::before]:text-muted-foreground",
