@@ -1,5 +1,6 @@
 .git
+.github
+.gitignore
 .next
 node_modules
 out
-.gemini

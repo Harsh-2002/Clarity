@@ -1,10 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson } from "lucide-react"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 
@@ -35,6 +43,10 @@ export default function NotesPage() {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle")
+  const fileInputRef = useState<HTMLInputElement | null>(null) // Using state ref pattern or useRef
+  // Actually useRef is better, let's just use document.getElementById or create a hidden input in render
+  // Retrying useRef import
+
 
   useEffect(() => {
     setMounted(true)
@@ -242,6 +254,62 @@ export default function NotesPage() {
     }
   }
 
+  const exportNoteAsJSON = (note: Note) => {
+    try {
+      const jsonString = JSON.stringify(note, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${note.title}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error("Failed to export note as JSON", e)
+    }
+  }
+
+  const importNoteFromJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const json = event.target?.result as string
+        const importedNote = JSON.parse(json)
+
+        // Basic validation
+        if (!importedNote.content || !importedNote.title) {
+          alert("Invalid note format")
+          return
+        }
+
+        // Create new note from imported data to avoid ID conflicts
+        const newNote: Note = {
+          id: Date.now().toString(),
+          title: importedNote.title + " (Imported)",
+          content: importedNote.content, // Includes Base64 images
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+
+        const updatedNotes = [newNote, ...notes]
+        saveNotes(updatedNotes)
+        setSelectedNote(newNote)
+        setContent(newNote.content)
+      } catch (err) {
+        console.error("Failed to import note", err)
+        alert("Failed to parse JSON")
+      }
+    }
+    reader.readAsText(file)
+    // Reset input
+    e.target.value = ""
+  }
+
   const updateNote = (contentString: string) => {
     if (!selectedNote) return
 
@@ -343,6 +411,24 @@ export default function NotesPage() {
             <Plus className="w-4 h-4 mr-2" />
             New Note
           </Button>
+
+          <div className="relative group">
+            <input
+              type="file"
+              id="import-json"
+              className="hidden"
+              accept=".json"
+              onChange={importNoteFromJSON}
+            />
+            <Button
+              variant="outline"
+              className="w-full text-xs h-8 border-dashed text-muted-foreground hover:text-primary"
+              onClick={() => document.getElementById('import-json')?.click()}
+            >
+              <Upload className="w-3.5 h-3.5 mr-2" />
+              Import JSON Note
+            </Button>
+          </div>
 
           {/* Search Bar */}
           <div className="relative">
@@ -544,45 +630,75 @@ export default function NotesPage() {
                     <span className="hidden sm:inline">Preview</span>
                   </Button>
                 </div>
+
+                {/* More Actions Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => confirmDelete(selectedNote)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Note
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => duplicateNote(selectedNote)}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => exportNoteAsMarkdown(selectedNote)}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Markdown
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportNoteAsJSON(selectedNote)}>
+                      <FileJson className="w-4 h-4 mr-2" />
+                      Export JSON
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
-
-            {/* Editor/Preview Area */}
-            <div className="flex-1 overflow-y-auto bg-background">
-              {viewMode === "edit" ? (
-                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
-                  {/* Key forces re-render when switching notes to ensure clean editor state */}
-                  <NovelEditor
-                    key={`editor-${selectedNote.id}`}
-                    content={content}
-                    onChange={updateNote}
-                    editable={true}
-                  />
-                </div>
-              ) : (
-                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
-                  <div className="notion-preview">
-                    <NovelEditor
-                      key={`preview-${selectedNote.id}`}
-                      content={content}
-                      onChange={() => { }}
-                      editable={false}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground p-6">
-            <div className="text-center max-w-md">
-              <BookMarked className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-20" />
-              <p className="text-base md:text-lg font-medium mb-2">No note selected</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Create or select a note to start editing</p>
-            </div>
           </div>
-        )}
+
+        {/* Editor/Preview Area */}
+        <div className="flex-1 overflow-y-auto bg-background">
+          {viewMode === "edit" ? (
+            <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+              {/* Key forces re-render when switching notes to ensure clean editor state */}
+              <NovelEditor
+                key={`editor-${selectedNote.id}`}
+                content={content}
+                onChange={updateNote}
+                editable={true}
+              />
+            </div>
+          ) : (
+            <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+              <div className="notion-preview">
+                <NovelEditor
+                  key={`preview-${selectedNote.id}`}
+                  content={content}
+                  onChange={() => { }}
+                  editable={false}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+      ) : (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground p-6">
+        <div className="text-center max-w-md">
+          <BookMarked className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-20" />
+          <p className="text-base md:text-lg font-medium mb-2">No note selected</p>
+          <p className="text-xs md:text-sm text-muted-foreground">Create or select a note to start editing</p>
+        </div>
       </div>
+        )}
+    </div>
     </div >
   )
 }
