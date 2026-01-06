@@ -124,7 +124,7 @@ export function StepApiKey() {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <p className="text-xs text-muted-foreground">
-            Your API key will be encrypted and stored locally. It's never sent to our servers.
+            Your API key will be encrypted and stored locally. It&apos;s never sent to our servers.
           </p>
         </div>
 

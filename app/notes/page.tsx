@@ -181,8 +181,16 @@ export default function NotesPage() {
             const headingText = node.content?.map((c: any) => c.text || "").join("") || ""
             return `${"#".repeat(level)} ${headingText}\n\n`
           case "paragraph":
-            const paraText = node.content?.map((c: any) => c.text || "").join("") || ""
-            return `${paraText}\n\n`
+            if (!node.content) return "\n"
+            return node.content.map((c: any) => {
+              if (c.type === "image") {
+                return `![${c.attrs?.alt || "image"}](${c.attrs?.src})`
+              }
+              if (c.type === "text") {
+                return c.text || ""
+              }
+              return ""
+            }).join("") + "\n\n"
           case "bulletList":
             return node.content?.map((item: any) => {
               const itemText = item.content?.[0]?.content?.map((c: any) => c.text || "").join("") || ""
@@ -193,12 +201,22 @@ export default function NotesPage() {
               const itemText = item.content?.[0]?.content?.map((c: any) => c.text || "").join("") || ""
               return `${i + 1}. ${itemText}\n`
             }).join("") + "\n"
+          case "taskList":
+            return node.content?.map((item: any) => {
+              const checked = item.attrs?.checked ? "x" : " "
+              const itemText = item.content?.[0]?.content?.map((c: any) => c.text || "").join("") || ""
+              return `- [${checked}] ${itemText}\n`
+            }).join("") + "\n"
           case "blockquote":
             const quoteText = node.content?.map((c: any) => processNode(c)).join("") || ""
             return `> ${quoteText.trim()}\n\n`
           case "codeBlock":
             const code = node.content?.map((c: any) => c.text || "").join("") || ""
             return `\`\`\`\n${code}\n\`\`\`\n\n`
+          case "image":
+            return `![${node.attrs?.alt || "image"}](${node.attrs?.src})\n\n`
+          case "horizontalRule":
+            return "---\n\n"
           default:
             return ""
         }
@@ -304,7 +322,7 @@ export default function NotesPage() {
           <DialogHeader>
             <DialogTitle>Delete Note?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <strong>"{noteToDelete?.title}"</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>&quot;{noteToDelete?.title}&quot;</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -380,7 +398,7 @@ export default function NotesPage() {
               ) : (
                 <>
                   <p className="font-medium mb-1">No notes yet</p>
-                  <p className="text-xs">Press Ctrl+N or click "New Note" to get started</p>
+                  <p className="text-xs">Press Ctrl+N or click &quot;New Note&quot; to get started</p>
                 </>
               )}
             </div>
