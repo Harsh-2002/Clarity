@@ -6,10 +6,11 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { MinimalNav, MobileNav } from "@/components/minimal-nav"
 
-import { Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 
 // Initialize fonts
-const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
+const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' })
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
   title: "Clarity",
@@ -28,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased bg-background text-foreground`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <MinimalNav />
           <div className="md:pl-16 min-h-screen transition-all duration-300">

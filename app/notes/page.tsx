@@ -1,15 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import dynamic from "next/dynamic"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Download, Upload, MoreVertical } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import dynamic from "next/dynamic"
 
-const MarkdownPreview = dynamic(
-  () => import("@uiw/react-markdown-preview").then((mod) => mod.default),
-  { ssr: false }
-)
+const NovelEditor = dynamic(() => import("@/components/editor/novel-editor"), {
+  ssr: false,
+  loading: () => <div className="h-[300px] animate-pulse bg-secondary/20 rounded-lg" />
+})
+import { formatRelativeTime } from "@/lib/format-time"
 
 interface Note {
   id: string
@@ -19,20 +22,45 @@ interface Note {
   updatedAt: number
 }
 
+type SortOption = "newest" | "oldest" | "title-asc" | "title-desc"
+
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
-  const [content, setContent] = useState("")
+  const [content, setContent] = useState<string>("")
   const [mounted, setMounted] = useState(false)
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit")
-  const [showMenu, setShowMenu] = useState(false)
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
+  const [sortBy, setSortBy] = useState<SortOption>("newest")
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle")
 
   useEffect(() => {
     setMounted(true)
     loadNotes()
   }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey)) {
+        if (e.key === 'n') {
+          e.preventDefault()
+          createNewNote()
+        } else if (e.key === 'k') {
+          e.preventDefault()
+          document.getElementById('search-input')?.focus()
+        } else if (e.key === 'e' && selectedNote) {
+          e.preventDefault()
+          setViewMode(viewMode === "edit" ? "preview" : "edit")
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [viewMode, selectedNote])
 
   const loadNotes = () => {
     try {
@@ -42,7 +70,18 @@ export default function NotesPage() {
         setNotes(parsed)
         if (parsed.length > 0) {
           setSelectedNote(parsed[0])
-          setContent(parsed[0].content)
+          try {
+            setContent(parsed[0].content)
+          } catch (e) {
+            // Migration: wrap plain text in a basic Tiptap doc structure
+            setContent(JSON.stringify({
+              type: "doc",
+              content: [{
+                type: "paragraph",
+                content: [{ type: "text", text: parsed[0].content.replace(/<[^>]*>/g, '') }]
+              }]
+            }))
+          }
         }
       }
     } catch (err) {
@@ -52,18 +91,73 @@ export default function NotesPage() {
 
   const saveNotes = (updatedNotes: Note[]) => {
     try {
+      setSaveStatus("saving")
       localStorage.setItem("clarity-notes", JSON.stringify(updatedNotes))
       setNotes(updatedNotes)
+      setTimeout(() => {
+        setSaveStatus("saved")
+        setTimeout(() => setSaveStatus("idle"), 2000)
+      }, 300)
     } catch (err) {
       console.error("Failed to save notes:", err)
+      setSaveStatus("idle")
     }
   }
 
   const createNewNote = () => {
+    const initialContent = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: "New Note" }]
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Start writing..." }]
+        }
+      ]
+    })
     const newNote: Note = {
       id: Date.now().toString(),
       title: "Untitled Note",
-      content: "# New Note\n\nStart writing...",
+      content: initialContent,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    const updatedNotes = [newNote, ...notes]
+    saveNotes(updatedNotes)
+    setSelectedNote(newNote)
+    setContent(initialContent)
+  }
+
+  const deleteNote = (id: string) => {
+    const updatedNotes = notes.filter((n) => n.id !== id)
+    saveNotes(updatedNotes)
+    if (selectedNote?.id === id) {
+      const next = updatedNotes[0] || null
+      setSelectedNote(next)
+      if (next) {
+        setContent(next.content)
+      } else {
+        setContent("")
+      }
+    }
+    setDeleteDialogOpen(false)
+    setNoteToDelete(null)
+  }
+
+  const confirmDelete = (note: Note) => {
+    setNoteToDelete(note)
+    setDeleteDialogOpen(true)
+  }
+
+  const duplicateNote = (note: Note) => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      title: `${note.title} (Copy)`,
+      content: note.content,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -73,118 +167,126 @@ export default function NotesPage() {
     setContent(newNote.content)
   }
 
-  const deleteNote = (id: string) => {
-    const updatedNotes = notes.filter((n) => n.id !== id)
-    saveNotes(updatedNotes)
-    if (selectedNote?.id === id) {
-      const next = updatedNotes[0] || null
-      setSelectedNote(next)
-      setContent(next?.content || "")
+  const exportNoteAsMarkdown = (note: Note) => {
+    try {
+      const data = JSON.parse(note.content)
+      let markdown = ""
+
+      const processNode = (node: any): string => {
+        if (!node) return ""
+
+        switch (node.type) {
+          case "heading":
+            const level = node.attrs?.level || 1
+            const headingText = node.content?.map((c: any) => c.text || "").join("") || ""
+            return `${"#".repeat(level)} ${headingText}\n\n`
+          case "paragraph":
+            const paraText = node.content?.map((c: any) => c.text || "").join("") || ""
+            return `${paraText}\n\n`
+          case "bulletList":
+            return node.content?.map((item: any) => {
+              const itemText = item.content?.[0]?.content?.map((c: any) => c.text || "").join("") || ""
+              return `- ${itemText}\n`
+            }).join("") + "\n"
+          case "orderedList":
+            return node.content?.map((item: any, i: number) => {
+              const itemText = item.content?.[0]?.content?.map((c: any) => c.text || "").join("") || ""
+              return `${i + 1}. ${itemText}\n`
+            }).join("") + "\n"
+          case "blockquote":
+            const quoteText = node.content?.map((c: any) => processNode(c)).join("") || ""
+            return `> ${quoteText.trim()}\n\n`
+          case "codeBlock":
+            const code = node.content?.map((c: any) => c.text || "").join("") || ""
+            return `\`\`\`\n${code}\n\`\`\`\n\n`
+          default:
+            return ""
+        }
+      }
+
+      if (data.content) {
+        data.content.forEach((node: any) => {
+          markdown += processNode(node)
+        })
+      }
+
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${note.title}.md`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error("Failed to export note", e)
     }
   }
 
-  const updateNote = (value: string | undefined) => {
+  const updateNote = (contentString: string) => {
     if (!selectedNote) return
-    
-    const newContent = value || ""
-    setContent(newContent)
-    
-    // Extract title from first heading or first line
-    const lines = newContent.split("\n")
-    const firstLine = lines[0] || "Untitled Note"
-    const title = firstLine.replace(/^#+\s*/, "").trim() || "Untitled Note"
-    
+
+    setContent(contentString)
+
+    // Extract title from Tiptap JSON content
+    let title = "Untitled Note"
+    try {
+      const data = JSON.parse(contentString)
+      if (data.content && data.content.length > 0) {
+        const firstNode = data.content[0]
+        // Get text from first heading or paragraph
+        if (firstNode.content && firstNode.content.length > 0) {
+          const textNode = firstNode.content[0]
+          if (textNode.text) {
+            title = textNode.text.replace(/<[^>]*>/g, '').trim()
+          }
+        }
+      }
+    } catch (e) {
+      // Keep default title on parse error
+    }
+
+    // Limit title length
+    title = title.substring(0, 100) || "Untitled Note"
+
     const updatedNote = {
       ...selectedNote,
       title,
-      content: newContent,
+      content: contentString,
       updatedAt: Date.now(),
     }
-    
+
     const updatedNotes = notes.map((n) => (n.id === selectedNote.id ? updatedNote : n))
     saveNotes(updatedNotes)
     setSelectedNote(updatedNote)
   }
 
-  const exportNotes = () => {
-    try {
-      const exportData = {
-        version: "1.0",
-        exportDate: new Date().toISOString(),
-        notes: notes,
-        count: notes.length
+  // Filter and sort notes
+  const filteredAndSortedNotes = notes
+    .filter(note => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return note.title.toLowerCase().includes(query) ||
+        note.content.toLowerCase().includes(query)
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return b.updatedAt - a.updatedAt
+        case "oldest":
+          return a.updatedAt - b.updatedAt
+        case "title-asc":
+          return a.title.localeCompare(b.title)
+        case "title-desc":
+          return b.title.localeCompare(a.title)
+        default:
+          return 0
       }
-      
-      const json = JSON.stringify(exportData, null, 2)
-      const blob = new Blob([json], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `clarity-notes-${Date.now()}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      
-      setFeedback({ type: "success", message: `Exported ${notes.length} notes successfully` })
-      setShowMenu(false)
-    } catch (err) {
-      console.error("Export failed:", err)
-      setFeedback({ type: "error", message: "Failed to export notes" })
-    }
-  }
+    })
 
-  const importNotes = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string
-        const importData = JSON.parse(content)
-        
-        // Validate schema
-        if (!importData.notes || !Array.isArray(importData.notes)) {
-          throw new Error("Invalid notes data format")
-        }
-        
-        // Validate each note has required fields
-        const validNotes = importData.notes.filter((note: any) => 
-          note.id && note.title && note.content && note.createdAt && note.updatedAt
-        )
-        
-        if (validNotes.length === 0) {
-          throw new Error("No valid notes found in import file")
-        }
-        
-        // Merge with existing notes (avoid duplicates)
-        const existingIds = new Set(notes.map(n => n.id))
-        const newNotes = validNotes.filter((note: Note) => !existingIds.has(note.id))
-        
-        const merged = [...notes, ...newNotes]
-        saveNotes(merged)
-        
-        setFeedback({ type: "success", message: `Imported ${newNotes.length} new notes` })
-        setShowMenu(false)
-      } catch (err) {
-        console.error("Import failed:", err)
-        setFeedback({ type: "error", message: "Failed to import notes. Invalid file format." })
-      }
-    }
-    
-    reader.readAsText(file)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
-  }
-
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => setFeedback(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [feedback])
+  const wordCount = selectedNote ? (content.blocks?.reduce((acc: number, block: any) => acc + (block.data.text?.split(/\s+/).length || 0), 0) || 0) : 0
+  const charCount = selectedNote ? (content.blocks?.reduce((acc: number, block: any) => acc + (block.data.text?.length || 0), 0) || 0) : 0
 
   if (!mounted) {
     return (
@@ -196,67 +298,103 @@ export default function NotesPage() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Note?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>"{noteToDelete?.title}"</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => noteToDelete && deleteNote(noteToDelete.id)}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Sidebar */}
       <div className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-border/50 flex flex-col bg-secondary/10 max-h-[35vh] md:max-h-full">
-        <div className="p-3 md:p-4 border-b border-border/50 space-y-2">
-          <div className="flex gap-2">
-            <Button onClick={createNewNote} className="flex-1" size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              New Note
-            </Button>
-            <div className="relative">
-              <Button 
-                onClick={() => setShowMenu(!showMenu)} 
-                variant="outline" 
-                size="lg"
-                className="px-3"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-              {showMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-popover border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
-                  <button
-                    onClick={exportNotes}
-                    className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors flex items-center gap-2 text-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export Notes
-                  </button>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors flex items-center gap-2 text-sm border-t border-border"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Import Notes
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="p-4 border-b border-border/50 space-y-3">
+          <Button onClick={createNewNote} className="w-full" size="lg">
+            <Plus className="w-4 h-4 mr-2" />
+            New Note
+          </Button>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              id="search-input"
+              type="text"
+              placeholder="Search notes... (Ctrl+K)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10"
+            />
           </div>
-          {feedback && (
-            <div className={cn(
-              "text-xs px-3 py-2 rounded-full animate-in fade-in slide-in-from-top-2",
-              feedback.type === "success" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-destructive/10 text-destructive"
-            )}>
-              {feedback.message}
-            </div>
-          )}
+
+          {/* Sort Options */}
+          <div className="flex gap-2">
+            <Button
+              variant={sortBy === "newest" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortBy("newest")}
+              className="flex-1 text-xs"
+            >
+              Newest
+            </Button>
+            <Button
+              variant={sortBy === "oldest" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortBy("oldest")}
+              className="flex-1 text-xs"
+            >
+              Oldest
+            </Button>
+            <Button
+              variant={sortBy.startsWith("title") ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortBy(sortBy === "title-asc" ? "title-desc" : "title-asc")}
+              className="flex-1 text-xs"
+            >
+              A-Z
+            </Button>
+          </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {notes.length === 0 ? (
+          {filteredAndSortedNotes.length === 0 ? (
             <div className="text-center py-8 md:py-12 text-muted-foreground text-sm">
               <BookMarked className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium mb-1">No notes yet</p>
-              <p className="text-xs">Create your first note to get started</p>
+              {searchQuery ? (
+                <>
+                  <p className="font-medium mb-1">No notes found</p>
+                  <p className="text-xs">Try a different search term</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium mb-1">No notes yet</p>
+                  <p className="text-xs">Press Ctrl+N or click "New Note" to get started</p>
+                </>
+              )}
             </div>
           ) : (
-            notes.map((note) => (
+            filteredAndSortedNotes.map((note) => (
               <div
                 key={note.id}
                 onClick={() => {
                   setSelectedNote(note)
-                  setContent(note.content)
+                  try {
+                    setContent(JSON.parse(note.content))
+                  } catch {
+                    setContent({ time: Date.now(), blocks: [] })
+                  }
                 }}
                 className={cn(
                   "group p-3 md:p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-secondary/30 hover:bg-secondary/60",
@@ -265,27 +403,67 @@ export default function NotesPage() {
                     : "bg-secondary/20 border border-transparent"
                 )}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm truncate mb-1">
                       {note.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(note.updatedAt).toLocaleDateString()}
+                    <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                      {formatRelativeTime(note.updatedAt)}
                     </p>
                   </div>
-                  <Button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.stopPropagation()
-                      deleteNote(note.id)
-                    }}
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                  </Button>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation()
+                        duplicateNote(note)
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Duplicate note"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation()
+                        exportNoteAsMarkdown(note)
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Export as Markdown"
+                    >
+                      <Download className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation()
+                        confirmDelete(note)
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Delete note"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
+                {/* Note Preview */}
+                <p className="text-xs text-muted-foreground/70 line-clamp-2">
+                  {(() => {
+                    try {
+                      const data = JSON.parse(note.content)
+                      // Find first paragraph or text block
+                      const block = data.blocks?.find((b: any) => b.data.text)
+                      return block ? block.data.text.replace(/<[^>]*>/g, '').substring(0, 100) : "No content"
+                    } catch {
+                      return "Error loading preview"
+                    }
+                  })()}
+                </p>
               </div>
             ))
           )}
@@ -296,69 +474,81 @@ export default function NotesPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedNote ? (
           <>
-            {/* Toolbar */}
-            <div className="border-b border-border/50 px-3 md:px-6 py-2 md:py-3 flex items-center justify-between bg-background/50 backdrop-blur-sm">
-              <h2 className="font-medium text-xs md:text-base truncate max-w-[120px] sm:max-w-[200px] md:max-w-md text-foreground/90">
-                {selectedNote.title}
-              </h2>
-              <div className="flex items-center gap-1 md:gap-2">
-                <Button
-                  onClick={() => setViewMode("edit")}
-                  variant={viewMode === "edit" ? "default" : "ghost"}
-                  size="sm"
-                  className="gap-1 md:gap-2 h-8 md:h-9"
-                >
-                  <Pen className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="hidden sm:inline text-xs md:text-sm">Edit</span>
-                </Button>
-                <Button
-                  onClick={() => setViewMode("preview")}
-                  variant={viewMode === "preview" ? "default" : "ghost"}
-                  size="sm"
-                  className="gap-1 md:gap-2 h-8 md:h-9"
-                >
-                  <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="hidden sm:inline text-xs md:text-sm">Preview</span>
-                </Button>
+            {/* Header */}
+            <div className="border-b border-border/50 bg-background/50 backdrop-blur-sm">
+              <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <h2 className="font-semibold text-sm md:text-lg truncate">
+                    {selectedNote.title}
+                  </h2>
+                  {/* Save Status */}
+                  {saveStatus !== "idle" && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {saveStatus === "saving" ? (
+                        <>
+                          <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-green-500" />
+                          <span className="text-green-600 dark:text-green-400">Saved</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Word Count */}
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full">
+                    <span>{wordCount} words</span>
+                    <span className="text-border">•</span>
+                    <span>{charCount} chars</span>
+                  </div>
+                  <Button
+                    onClick={() => setViewMode("edit")}
+                    variant={viewMode === "edit" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    title="Edit mode (Ctrl+E)"
+                  >
+                    <Pen className="w-4 h-4" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                  <Button
+                    onClick={() => setViewMode("preview")}
+                    variant={viewMode === "preview" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    title="Preview mode (Ctrl+E)"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    <span className="hidden sm:inline">Preview</span>
+                  </Button>
+                </div>
               </div>
             </div>
-            
-            {/* Hidden file input for import */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={importNotes}
-              className="hidden"
-            />
 
             {/* Editor/Preview Area */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto bg-background">
               {viewMode === "edit" ? (
-                <div className="h-full p-4 sm:p-6 md:p-8 lg:p-12">
-                  <textarea
-                    value={content}
-                    onChange={(e) => updateNote(e.target.value)}
-                    placeholder="Start writing... (Markdown supported)"
-                    className="w-full h-full resize-none bg-transparent border-0 focus:outline-none text-sm sm:text-base md:text-lg leading-relaxed font-light placeholder:text-muted-foreground/50"
-                    style={{
-                      fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                    }}
+                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+                  {/* Key forces re-render when switching notes to ensure clean editor state */}
+                  <NovelEditor
+                    key={`editor-${selectedNote.id}`}
+                    content={content}
+                    onChange={updateNote}
+                    editable={true}
                   />
                 </div>
               ) : (
-                <div className="h-full overflow-y-auto p-4 sm:p-6 md:p-12 bg-secondary/5" data-color-mode="auto">
-                  <div className="max-w-4xl mx-auto">
-                    <MarkdownPreview 
-                      source={content || "*No content yet. Switch to edit mode to start writing.*"} 
-                      className="bg-transparent"
-                      style={{
-                        padding: 0,
-                        backgroundColor: 'transparent',
-                        color: 'inherit',
-                        fontSize: 'clamp(0.9rem, 2vw, 1.125rem)',
-                        lineHeight: '1.75'
-                      }}
+                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+                  <div className="notion-preview">
+                    <NovelEditor
+                      key={`preview-${selectedNote.id}`}
+                      content={content}
+                      onChange={() => { }}
+                      editable={false}
                     />
                   </div>
                 </div>
@@ -375,6 +565,6 @@ export default function NotesPage() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }
