@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { AudioRecorder } from "@/lib/audio-recorder"
 import type { RecordingState } from "@/lib/audio-recorder"
@@ -33,7 +33,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
   useEffect(() => {
     setRecorder(new AudioRecorder())
-    
+
     // Cleanup all timeouts on unmount
     return () => {
       if (holdTimeoutRef.current) {
@@ -44,6 +44,43 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       }
     }
   }, [])
+
+  const handleRecordingComplete = useCallback((blob: Blob, duration: number) => {
+    const timestamp = new Date().toLocaleTimeString().replace(/:/g, "-")
+    const fileName = `recording-${timestamp}.webm`
+    onAudioReady(blob, fileName, duration)
+  }, [onAudioReady])
+
+  const handleStartRecording = useCallback(async () => {
+    setError(null)
+    try {
+      await recorder?.startRecording(setRecordingState, setFrequencyData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start recording")
+    }
+  }, [recorder])
+
+  const handlePauseResume = () => {
+    if (recordingState.isPaused) {
+      recorder?.resumeRecording()
+    } else {
+      recorder?.pauseRecording()
+    }
+  }
+
+  const handleStopRecording = useCallback(async () => {
+    if (!recorder) return
+
+    const audioBlob = await recorder.stopRecording()
+    handleRecordingComplete(audioBlob, recordingState.duration)
+    setRecordingState({
+      isRecording: false,
+      isPaused: false,
+      duration: 0,
+      audioBlob: null,
+    })
+    setFrequencyData(null)
+  }, [recorder, handleRecordingComplete, recordingState.duration])
 
   // Lock orientation to landscape on mobile when recording
   useEffect(() => {
@@ -85,18 +122,18 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       // Don't trigger if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.repeat) return // Ignore key repeat events
-      
+
       if (e.code === "Space") {
         // ALWAYS prevent default to stop page scroll
         e.preventDefault()
         e.stopPropagation()
-        
+
         if (!recordingState.isRecording && !isHoldingSpace) {
           setIsHoldingSpace(true)
-          
+
           // Start recording immediately on press
           handleStartRecording()
-          
+
           // Set a timeout - if they hold for more than 500ms, it's "hold mode"
           holdTimeoutRef.current = setTimeout(() => {
             // They're holding it - recording will continue until release
@@ -107,18 +144,18 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      
+
       if (e.code === "Space" && isHoldingSpace) {
         e.preventDefault()
         e.stopPropagation()
         setIsHoldingSpace(false)
-        
+
         // Clear the hold timeout
         if (holdTimeoutRef.current) {
           clearTimeout(holdTimeoutRef.current)
           holdTimeoutRef.current = null
         }
-        
+
         // Stop recording when spacebar is released
         if (recordingState.isRecording) {
           handleStopRecording()
@@ -128,7 +165,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
     window.addEventListener("keydown", handleKeyDown)
     window.addEventListener("keyup", handleKeyUp)
-    
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
@@ -136,7 +173,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
         clearTimeout(holdTimeoutRef.current)
       }
     }
-  }, [recordingState.isRecording, isHoldingSpace, recorder])
+  }, [recordingState.isRecording, isHoldingSpace, recorder, handleStartRecording, handleStopRecording])
 
   useEffect(() => {
     if (!recordingState.isRecording || recordingState.isPaused) return
@@ -144,7 +181,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     const interval = setInterval(() => {
       setRecordingState((prev) => {
         const newDuration = prev.duration + 1
-        
+
         // Show warning at 30 minutes (1800 seconds)
         if (newDuration === 1800) {
           setShowDurationWarning(true)
@@ -154,7 +191,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
           }
           warningTimeoutRef.current = setTimeout(() => setShowDurationWarning(false), 5000)
         }
-        
+
         return {
           ...prev,
           duration: newDuration,
@@ -171,42 +208,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
   }
 
-  const handleStartRecording = async () => {
-    setError(null)
-    try {
-      await recorder?.startRecording(setRecordingState, setFrequencyData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start recording")
-    }
-  }
 
-  const handlePauseResume = () => {
-    if (recordingState.isPaused) {
-      recorder?.resumeRecording()
-    } else {
-      recorder?.pauseRecording()
-    }
-  }
-
-  const handleStopRecording = async () => {
-    if (!recorder) return
-
-    const audioBlob = await recorder.stopRecording()
-    handleRecordingComplete(audioBlob, recordingState.duration)
-    setRecordingState({
-      isRecording: false,
-      isPaused: false,
-      duration: 0,
-      audioBlob: null,
-    })
-    setFrequencyData(null)
-  }
-
-  const handleRecordingComplete = (blob: Blob, duration: number) => {
-    const timestamp = new Date().toLocaleTimeString().replace(/:/g, "-")
-    const fileName = `recording-${timestamp}.webm`
-    onAudioReady(blob, fileName, duration)
-  }
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null)
@@ -226,10 +228,10 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     // Validate file type and size
     const fileType = file.type
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
-    
+
     // OpenAI/Groq support: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
     const supportedFormats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
-    
+
     if (!fileExtension || !supportedFormats.includes(fileExtension)) {
       setError(`Unsupported format: .${fileExtension}. Supported: ${supportedFormats.join(', ')}`)
       if (fileInputRef.current) {
@@ -247,7 +249,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       }
       return
     }
-    
+
     onAudioReady(file, file.name, 0)
 
     // Reset input
@@ -289,7 +291,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     // Validate file type and size
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
     const supportedFormats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
-    
+
     if (!fileExtension || !supportedFormats.includes(fileExtension)) {
       setError(`Unsupported format: .${fileExtension}. Supported: ${supportedFormats.join(', ')}`)
       return
@@ -301,12 +303,12 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum: 25MB.`)
       return
     }
-    
+
     onAudioReady(file, file.name, 0)
   }
 
   return (
-    <div 
+    <div
       className="flex flex-col items-center justify-center w-full max-w-md mx-auto min-h-[400px] relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -322,7 +324,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
           </div>
         </div>
       )}
-      
+
       {/* Error Message */}
       {error && (
         <div className="absolute top-0 left-0 right-0 text-center p-4 animate-in fade-in slide-in-from-top-4">
@@ -357,16 +359,16 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
           error ? "mt-14" : "mt-0"
         )}
       >
-        
+
         {recordingState.isRecording ? (
           // Active Recording State
           <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="text-6xl font-light tracking-tighter tabular-nums text-foreground/80">
               {formatTime(recordingState.duration)}
             </div>
-            
+
             <div className="h-32 w-full flex items-center justify-center">
-               <AudioVisualizer frequencyData={frequencyData} isRecording={true} />
+              <AudioVisualizer frequencyData={frequencyData} isRecording={true} />
             </div>
 
             <div className="flex items-center gap-6">
@@ -382,7 +384,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
                   <Pause className="w-6 h-6 fill-current" />
                 )}
               </Button>
-              
+
               <Button
                 onClick={handleStopRecording}
                 variant="destructive"
@@ -403,12 +405,12 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
               <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-30 duration-1000" />
               <Mic className="w-12 h-12" />
             </button>
-            
+
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-medium tracking-tight">Tap to Record</h2>
               <p className="text-muted-foreground text-sm">
                 or{" "}
-                <button 
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="text-primary hover:underline underline-offset-4 font-medium"
                 >
@@ -424,12 +426,12 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       </div>
 
       {/* Hidden File Input */}
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept="audio/flac,audio/m4a,audio/mp3,audio/mp4,audio/mpeg,audio/mpga,audio/oga,audio/ogg,audio/wav,audio/webm,.flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm" 
-        onChange={handleFileSelect} 
-        className="hidden" 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="audio/flac,audio/m4a,audio/mp3,audio/mp4,audio/mpeg,audio/mpga,audio/oga,audio/ogg,audio/wav,audio/webm,.flac,.m4a,.mp3,.mp4,.mpeg,.mpga,.oga,.ogg,.wav,.webm"
+        onChange={handleFileSelect}
+        className="hidden"
       />
     </div>
   )

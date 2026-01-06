@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [isPageReady, setIsPageReady] = useState(false)
-  
+
   // Model selection states
   const [availableTranscriptionModels, setAvailableTranscriptionModels] = useState<string[]>([])
   const [availableFinetuneModels, setAvailableFinetuneModels] = useState<string[]>([])
@@ -29,6 +29,22 @@ export default function SettingsPage() {
   const [dataSize, setDataSize] = useState<string>("")
 
   // Initial load - don't fetch models immediately
+  const calculateDataSize = useCallback(() => {
+    const data = exportAllData()
+    const json = JSON.stringify(data, null, 2)
+    const bytes = new Blob([json]).size
+    const kb = bytes / 1024
+    const mb = kb / 1024
+
+    if (mb >= 1) {
+      setDataSize(`${mb.toFixed(2)} MB`)
+    } else if (kb >= 1) {
+      setDataSize(`${kb.toFixed(2)} KB`)
+    } else {
+      setDataSize(`${bytes} bytes`)
+    }
+  }, [])
+
   useEffect(() => {
     const appSettings = getSettings()
     if (!appSettings.onboardingComplete) {
@@ -48,7 +64,7 @@ export default function SettingsPage() {
       // Mark page as ready immediately
       setIsPageReady(true)
     }
-  }, [router])
+  }, [router, calculateDataSize])
 
   // Defer model fetching to after page render
   useEffect(() => {
@@ -60,26 +76,12 @@ export default function SettingsPage() {
     }
   }, [isPageReady, settings, provider])
 
-  const calculateDataSize = useCallback(() => {
-    const data = exportAllData()
-    const json = JSON.stringify(data, null, 2)
-    const bytes = new Blob([json]).size
-    const kb = bytes / 1024
-    const mb = kb / 1024
-    
-    if (mb >= 1) {
-      setDataSize(`${mb.toFixed(2)} MB`)
-    } else if (kb >= 1) {
-      setDataSize(`${kb.toFixed(2)} KB`)
-    } else {
-      setDataSize(`${bytes} bytes`)
-    }
-  }, [])
+
 
   const fetchModels = async (providerId: string, apiKey: string) => {
     setIsFetchingModels(true)
     const { models } = await fetchAvailableModels(providerId, apiKey)
-    
+
     let transcriptionModels = models
     let finetuneModels = models
 
@@ -105,7 +107,7 @@ export default function SettingsPage() {
 
   const handleSaveModelSettings = () => {
     if (!settings) return
-    
+
     const updatedSettings: AppSettings = {
       ...settings,
       selectedTranscriptionModel,
@@ -203,11 +205,10 @@ export default function SettingsPage() {
         {/* Feedback Messages */}
         {feedback && (
           <div
-            className={`rounded-lg border p-4 flex items-center gap-3 animate-in fade-in ${
-              feedback.type === "success"
-                ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
-                : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
-            }`}
+            className={`rounded-lg border p-4 flex items-center gap-3 animate-in fade-in ${feedback.type === "success"
+              ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
+              : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+              }`}
           >
             <div className="w-2 h-2 rounded-full bg-current" />
             <p className="text-sm font-medium">{feedback.message}</p>
@@ -270,14 +271,12 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => setAutoFineTune(!autoFineTune)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    autoFineTune ? "bg-primary" : "bg-secondary"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoFineTune ? "bg-primary" : "bg-secondary"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-background shadow-sm transition-transform ${
-                      autoFineTune ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-background shadow-sm transition-transform ${autoFineTune ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -354,9 +353,9 @@ export default function SettingsPage() {
           </div>
 
           {!showClearConfirm ? (
-            <Button 
-              onClick={handleClearData} 
-              variant="ghost" 
+            <Button
+              onClick={handleClearData}
+              variant="ghost"
               className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start px-0"
             >
               <Trash2 className="w-4 h-4 mr-2" />

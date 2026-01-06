@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -43,36 +43,10 @@ export default function NotesPage() {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle")
-  const fileInputRef = useState<HTMLInputElement | null>(null) // Using state ref pattern or useRef
-  // Actually useRef is better, let's just use document.getElementById or create a hidden input in render
-  // Retrying useRef import
+  // Removed unused fileInputRef
 
 
-  useEffect(() => {
-    setMounted(true)
-    loadNotes()
-  }, [])
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey)) {
-        if (e.key === 'n') {
-          e.preventDefault()
-          createNewNote()
-        } else if (e.key === 'k') {
-          e.preventDefault()
-          document.getElementById('search-input')?.focus()
-        } else if (e.key === 'e' && selectedNote) {
-          e.preventDefault()
-          setViewMode(viewMode === "edit" ? "preview" : "edit")
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [viewMode, selectedNote])
 
   const loadNotes = () => {
     try {
@@ -101,7 +75,7 @@ export default function NotesPage() {
     }
   }
 
-  const saveNotes = (updatedNotes: Note[]) => {
+  const saveNotes = useCallback((updatedNotes: Note[]) => {
     try {
       setSaveStatus("saving")
       localStorage.setItem("clarity-notes", JSON.stringify(updatedNotes))
@@ -114,9 +88,9 @@ export default function NotesPage() {
       console.error("Failed to save notes:", err)
       setSaveStatus("idle")
     }
-  }
+  }, [])
 
-  const createNewNote = () => {
+  const createNewNote = useCallback(() => {
     const initialContent = JSON.stringify({
       type: "doc",
       content: [
@@ -142,7 +116,33 @@ export default function NotesPage() {
     saveNotes(updatedNotes)
     setSelectedNote(newNote)
     setContent(initialContent)
-  }
+  }, [notes, saveNotes])
+
+  useEffect(() => {
+    setMounted(true)
+    loadNotes()
+  }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey)) {
+        if (e.key === 'n') {
+          e.preventDefault()
+          createNewNote()
+        } else if (e.key === 'k') {
+          e.preventDefault()
+          document.getElementById('search-input')?.focus()
+        } else if (e.key === 'e' && selectedNote) {
+          e.preventDefault()
+          setViewMode(viewMode === "edit" ? "preview" : "edit")
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [viewMode, selectedNote, createNewNote])
 
   const deleteNote = (id: string) => {
     const updatedNotes = notes.filter((n) => n.id !== id)
@@ -629,76 +629,75 @@ export default function NotesPage() {
                     <BookOpen className="w-4 h-4" />
                     <span className="hidden sm:inline">Preview</span>
                   </Button>
-                </div>
 
-                {/* More Actions Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => confirmDelete(selectedNote)} className="text-destructive focus:text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Note
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => duplicateNote(selectedNote)}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => exportNoteAsMarkdown(selectedNote)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Export Markdown
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => exportNoteAsJSON(selectedNote)}>
-                      <FileJson className="w-4 h-4 mr-2" />
-                      Export JSON
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  {/* More Actions Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => confirmDelete(selectedNote)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Note
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => duplicateNote(selectedNote)}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => exportNoteAsMarkdown(selectedNote)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Markdown
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportNoteAsJSON(selectedNote)}>
+                        <FileJson className="w-4 h-4 mr-2" />
+                        Export JSON
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
+            </div>
+
+            {/* Editor/Preview Area */}
+            <div className="flex-1 overflow-y-auto bg-background">
+              {viewMode === "edit" ? (
+                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+                  {/* Key forces re-render when switching notes to ensure clean editor state */}
+                  <NovelEditor
+                    key={`editor-${selectedNote.id}`}
+                    content={content}
+                    onChange={updateNote}
+                    editable={true}
+                  />
+                </div>
+              ) : (
+                <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
+                  <div className="notion-preview">
+                    <NovelEditor
+                      key={`preview-${selectedNote.id}`}
+                      content={content}
+                      onChange={() => { }}
+                      editable={false}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground p-6">
+            <div className="text-center max-w-md">
+              <BookMarked className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-20" />
+              <p className="text-base md:text-lg font-medium mb-2">No note selected</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Create or select a note to start editing</p>
             </div>
           </div>
-
-        {/* Editor/Preview Area */}
-        <div className="flex-1 overflow-y-auto bg-background">
-          {viewMode === "edit" ? (
-            <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
-              {/* Key forces re-render when switching notes to ensure clean editor state */}
-              <NovelEditor
-                key={`editor-${selectedNote.id}`}
-                content={content}
-                onChange={updateNote}
-                editable={true}
-              />
-            </div>
-          ) : (
-            <div className="h-full p-4 sm:p-6 container mx-auto max-w-4xl">
-              <div className="notion-preview">
-                <NovelEditor
-                  key={`preview-${selectedNote.id}`}
-                  content={content}
-                  onChange={() => { }}
-                  editable={false}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </>
-      ) : (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground p-6">
-        <div className="text-center max-w-md">
-          <BookMarked className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-20" />
-          <p className="text-base md:text-lg font-medium mb-2">No note selected</p>
-          <p className="text-xs md:text-sm text-muted-foreground">Create or select a note to start editing</p>
-        </div>
-      </div>
         )}
-    </div>
+      </div>
     </div >
   )
 }

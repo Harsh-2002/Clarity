@@ -251,6 +251,7 @@ export default function NovelEditor({
                 content: [{ type: "paragraph" }]
             })
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleUpdate = (editor: any) => {
