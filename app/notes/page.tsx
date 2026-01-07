@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer } from "lucide-react"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code } from "lucide-react"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 
@@ -279,10 +279,10 @@ export default function NotesPage() {
     clone.style.cssText = `
       background: white !important;
       color: #1a1a1a !important;
-      padding: 40px !important;
-      font-family: 'Georgia', 'Times New Roman', serif !important;
-      font-size: 11pt !important;
-      line-height: 1.7 !important;
+      padding: 0 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-size: 10pt !important;
+      line-height: 1.5 !important;
       max-width: 100% !important;
       width: 100% !important;
     `
@@ -290,70 +290,67 @@ export default function NotesPage() {
     // ===== HEADINGS =====
     clone.querySelectorAll('h1').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        font-size: 26pt !important;
-        font-weight: bold !important;
-        margin: 0 0 20pt 0 !important;
+        font-size: 18pt !important;
+        font-weight: 600 !important;
+        margin: 0 0 8pt 0 !important;
         color: #111 !important;
-        border-bottom: 2pt solid #333 !important;
-        padding-bottom: 8pt !important;
-        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       `
     })
     clone.querySelectorAll('h2').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        font-size: 18pt !important;
-        font-weight: bold !important;
-        margin: 24pt 0 12pt 0 !important;
+        font-size: 14pt !important;
+        font-weight: 600 !important;
+        margin: 12pt 0 6pt 0 !important;
         color: #222 !important;
-        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       `
     })
     clone.querySelectorAll('h3').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        font-size: 14pt !important;
-        font-weight: bold !important;
-        margin: 18pt 0 8pt 0 !important;
+        font-size: 12pt !important;
+        font-weight: 600 !important;
+        margin: 10pt 0 4pt 0 !important;
         color: #333 !important;
-        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       `
     })
     clone.querySelectorAll('h4, h5, h6').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        font-size: 12pt !important;
-        font-weight: bold !important;
-        margin: 14pt 0 6pt 0 !important;
+        font-size: 10pt !important;
+        font-weight: 600 !important;
+        margin: 8pt 0 4pt 0 !important;
         color: #444 !important;
-        font-family: 'Helvetica Neue', Arial, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       `
     })
 
     // ===== PARAGRAPHS =====
     clone.querySelectorAll('p').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        margin-bottom: 12pt !important;
+        margin: 0 0 6pt 0 !important;
         color: #1a1a1a !important;
-        text-align: justify !important;
       `
     })
 
     // ===== LISTS (Ordered & Unordered) =====
     clone.querySelectorAll('ul').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        margin: 12pt 0 12pt 24pt !important;
+        margin: 4pt 0 4pt 16pt !important;
         padding-left: 0 !important;
         list-style-type: disc !important;
       `
     })
     clone.querySelectorAll('ol').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        margin: 12pt 0 12pt 24pt !important;
+        margin: 4pt 0 4pt 16pt !important;
         padding-left: 0 !important;
         list-style-type: decimal !important;
       `
     })
     clone.querySelectorAll('li').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        margin-bottom: 6pt !important;
+        margin-bottom: 2pt !important;
         color: #1a1a1a !important;
       `
     })
@@ -420,13 +417,11 @@ export default function NotesPage() {
     // ===== BLOCKQUOTES =====
     clone.querySelectorAll('blockquote').forEach(el => {
       (el as HTMLElement).style.cssText = `
-        border-left: 4pt solid #ccc !important;
-        padding-left: 16pt !important;
-        margin: 16pt 0 !important;
+        border-left: 2pt solid #ccc !important;
+        padding-left: 10pt !important;
+        margin: 6pt 0 !important;
         color: #555 !important;
         font-style: italic !important;
-        background: #fafafa !important;
-        padding: 12pt 12pt 12pt 16pt !important;
       `
     })
 
@@ -435,8 +430,8 @@ export default function NotesPage() {
       (el as HTMLElement).style.cssText = `
         width: 100% !important;
         border-collapse: collapse !important;
-        margin: 16pt 0 !important;
-        font-size: 10pt !important;
+        margin: 6pt 0 !important;
+        font-size: 9pt !important;
       `
     })
     clone.querySelectorAll('th').forEach(el => {
@@ -524,7 +519,7 @@ export default function NotesPage() {
 
     // Generate PDF with optimized settings
     const opt = {
-      margin: [15, 20, 15, 20],
+      margin: [10, 12, 10, 12],
       filename: `${note.title || 'note'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
@@ -542,45 +537,6 @@ export default function NotesPage() {
     }
 
     html2pdf().set(opt).from(wrapper).save()
-  }
-
-  const importNoteFromJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const json = event.target?.result as string
-        const importedNote = JSON.parse(json)
-
-        // Basic validation
-        if (!importedNote.content || !importedNote.title) {
-          alert("Invalid note format")
-          return
-        }
-
-        // Create new note from imported data to avoid ID conflicts
-        const newNote: Note = {
-          id: Date.now().toString(),
-          title: importedNote.title + " (Imported)",
-          content: importedNote.content, // Includes Base64 images
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-
-        const updatedNotes = [newNote, ...notes]
-        saveNotes(updatedNotes)
-        setSelectedNote(newNote)
-        setContent(newNote.content)
-      } catch (err) {
-        console.error("Failed to import note", err)
-        alert("Failed to parse JSON")
-      }
-    }
-    reader.readAsText(file)
-    // Reset input
-    e.target.value = ""
   }
 
   const updateNote = (contentString: string) => {
@@ -621,6 +577,67 @@ export default function NotesPage() {
     setSelectedNote(updatedNote)
   }
 
+  const handleImport = async (file: File) => {
+    const text = await file.text()
+
+    let newNote: Note;
+
+    if (file.name.endsWith('.json')) {
+      try {
+        const imported = JSON.parse(text)
+        if (!imported.content) throw new Error("Invalid JSON note")
+        newNote = {
+          id: Date.now().toString(),
+          title: imported.title || file.name.replace('.json', ''),
+          content: imported.content,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+      } catch (e) {
+        alert("Failed to parse JSON note")
+        return
+      }
+    } else if (file.name.endsWith('.md')) {
+      // Convert Markdown to Tiptap JSON
+      const lines = text.split('\n')
+      const content = lines.map(line => ({
+        type: "paragraph",
+        content: line.trim() ? [{ type: "text", text: line }] : []
+      }))
+
+      newNote = {
+        id: Date.now().toString(),
+        title: file.name.replace('.md', ''),
+        content: JSON.stringify({ type: "doc", content }),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+    } else {
+      alert("Unsupported file type")
+      return
+    }
+
+    const updatedNotes = [newNote, ...notes]
+    saveNotes(updatedNotes)
+    setSelectedNote(newNote)
+    setContent(newNote.content)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const file = e.dataTransfer.files?.[0]
+    if (file && (file.name.endsWith('.json') || file.name.endsWith('.md'))) {
+      await handleImport(file)
+    }
+  }
+
   // Filter and sort notes
   const filteredAndSortedNotes = notes
     .filter(note => {
@@ -629,20 +646,7 @@ export default function NotesPage() {
       return note.title.toLowerCase().includes(query) ||
         note.content.toLowerCase().includes(query)
     })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return b.updatedAt - a.updatedAt
-        case "oldest":
-          return a.updatedAt - b.updatedAt
-        case "title-asc":
-          return a.title.localeCompare(b.title)
-        case "title-desc":
-          return b.title.localeCompare(a.title)
-        default:
-          return 0
-      }
-    })
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 
   const wordCount = (() => {
     if (!content) return 0
@@ -676,7 +680,11 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+    <div
+      className="flex flex-col md:flex-row h-screen overflow-hidden"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -700,27 +708,34 @@ export default function NotesPage() {
       {/* Sidebar */}
       <div className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-border/50 flex flex-col bg-secondary/10 max-h-[35vh] md:max-h-full print:hidden">
         <div className="p-4 border-b border-border/50 space-y-3">
-          <Button onClick={createNewNote} className="w-full" size="lg">
-            <Plus className="w-4 h-4 mr-2" />
-            New Note
-          </Button>
-
-          <div className="relative group">
-            <input
-              type="file"
-              id="import-json"
-              className="hidden"
-              accept=".json"
-              onChange={importNoteFromJSON}
-            />
-            <Button
-              variant="outline"
-              className="w-full text-xs h-8 border-dashed text-muted-foreground hover:text-primary"
-              onClick={() => document.getElementById('import-json')?.click()}
-            >
-              <Upload className="w-3.5 h-3.5 mr-2" />
-              Import JSON Note
+          <div className="flex gap-2">
+            <Button onClick={createNewNote} className="flex-1" size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              New Note
             </Button>
+
+            <div className="relative">
+              <input
+                type="file"
+                id="import-note"
+                className="hidden"
+                accept=".json,.md"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleImport(file)
+                  e.target.value = ""
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11"
+                title="Import Note (JSON/MD)"
+                onClick={() => document.getElementById('import-note')?.click()}
+              >
+                <Upload className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -734,34 +749,6 @@ export default function NotesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-10"
             />
-          </div>
-
-          {/* Sort Options */}
-          <div className="flex gap-2">
-            <Button
-              variant={sortBy === "newest" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSortBy("newest")}
-              className="flex-1 text-xs"
-            >
-              Newest
-            </Button>
-            <Button
-              variant={sortBy === "oldest" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSortBy("oldest")}
-              className="flex-1 text-xs"
-            >
-              Oldest
-            </Button>
-            <Button
-              variant={sortBy.startsWith("title") ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSortBy(sortBy === "title-asc" ? "title-desc" : "title-asc")}
-              className="flex-1 text-xs"
-            >
-              A-Z
-            </Button>
           </div>
         </div>
 
@@ -806,86 +793,45 @@ export default function NotesPage() {
                     <h3 className="font-medium text-sm truncate mb-1">
                       {note.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-                      {formatRelativeTime(note.updatedAt)}
-                    </p>
+                    <div className="text-xs text-muted-foreground line-clamp-2">
+                      {note.content.includes('"text":')
+                        ? JSON.parse(note.content).content?.[0]?.content?.[0]?.text || "No content"
+                        : "text-muted-foreground"
+                      }
+                    </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation()
-                        duplicateNote(note)
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Duplicate note"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation()
-                        exportNoteAsMarkdown(note)
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Export as Markdown"
-                    >
-                      <Download className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation()
-                        exportNoteAsPDF(note)
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Export as PDF"
-                    >
-                      <Printer className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation()
-                        confirmDelete(note)
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Delete note"
-                    >
-                      <Trash2 className="w-3 h-3 text-destructive" />
-                    </Button>
-                  </div>
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      confirmDelete(note)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-md transition-all"
+                    title="Delete note"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                {/* Note Preview */}
-                <p className="text-xs text-muted-foreground/70 line-clamp-2">
-                  {(() => {
-                    try {
-                      const data = JSON.parse(note.content)
-                      // Find first paragraph or text block
-                      const block = data.blocks?.find((b: any) => b.data.text)
-                      return block ? block.data.text.replace(/<[^>]*>/g, '').substring(0, 100) : "No content"
-                    } catch {
-                      return "Error loading preview"
-                    }
-                  })()}
-                </p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {formatRelativeTime(note.updatedAt)}
+                  </span>
+                  {selectedNote?.id === note.id && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  )}
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
         {selectedNote ? (
           <>
             {/* Header */}
-            <div className="border-b border-border/50 bg-background/50 backdrop-blur-sm print:hidden">
+            <div className="h-14 border-b border-border/50 bg-background/50 backdrop-blur-sm sticky top-0 z-10 print:hidden">
               <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <h2 className="font-semibold text-sm md:text-lg truncate">
@@ -913,19 +859,37 @@ export default function NotesPage() {
                   <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full print:hidden">
                     <span>{wordCount} words</span>
                   </div>
-                  {/* Export PDF Button */}
-                  <Button
-                    onClick={() => exportNoteAsPDF(selectedNote)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 rounded-full print:hidden"
-                    title="Export as PDF"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Export PDF</span>
-                  </Button>
+                  {/* Export Options */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 rounded-full print:hidden"
+                        title="Export options"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Export</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Export As</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => exportNoteAsPDF(selectedNote)}>
+                        <Printer className="w-4 h-4 mr-2" />
+                        PDF Document
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportNoteAsMarkdown(selectedNote)}>
+                        <FileJson className="w-4 h-4 mr-2" />
+                        Markdown File
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportNoteAsJSON(selectedNote)}>
+                        <Code className="w-4 h-4 mr-2" />
+                        JSON Data
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                {/* Theme Selector Removed */}
               </div>
             </div>
 

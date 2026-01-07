@@ -28,7 +28,8 @@ import {
     createImageUpload,
     handleImageDrop,
     handleImagePaste,
-    type ImageUploadOptions
+    type ImageUploadOptions,
+    GlobalDragHandle
 } from "novel"
 import { cn } from "@/lib/utils"
 import { useEffect, useState, useRef, useCallback } from "react"
@@ -50,6 +51,7 @@ import {
     Image as ImageIcon,
     type LucideIcon
 } from "lucide-react"
+import { Markdown } from "tiptap-markdown"
 
 interface NovelEditorProps {
     content: string
@@ -231,7 +233,17 @@ export default function NovelEditor({
         Color,
         HighlightExtension.configure({ multicolor: true }),
         TaskList,
-        TaskItem.configure({ nested: true })
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Markdown.configure({
+            html: true,
+            transformPastedText: true,
+            transformCopiedText: true
+        }),
+        GlobalDragHandle.configure({
+            dragHandleWidth: 20,
+            scrollTreshold: 100,
+        })
     ]
 
     useEffect(() => {
