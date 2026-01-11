@@ -15,9 +15,11 @@ import {
     Calendar,
     Search,
     Moon,
-    Sun
+    Sun,
+    ArrowRight
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { cn } from "@/lib/utils"
 
 interface Note {
     id: string
@@ -73,157 +75,135 @@ export function CommandPalette() {
     if (!open) return null
 
     return (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                className="fixed inset-0 bg-background/60 backdrop-blur-sm transition-opacity"
                 onClick={() => setOpen(false)}
             />
 
             {/* Command Dialog */}
-            <div className="absolute left-1/2 top-[20%] -translate-x-1/2 w-full max-w-lg">
+            <div className="relative w-full max-w-lg shadow-2xl rounded-3xl animate-in fade-in zoom-in-95 duration-200">
                 <Command
-                    className="rounded-2xl border border-border bg-background shadow-2xl overflow-hidden"
-                    shouldFilter={true}
+                    className="w-full bg-background/90 backdrop-blur-xl border border-border/50 rounded-3xl overflow-hidden"
+                    loop
                 >
-                    <div className="flex items-center border-b border-border px-4">
-                        <Search className="w-4 h-4 text-muted-foreground mr-2" />
+                    <div className="flex items-center border-b border-border/50 px-6 py-4">
+                        <Search className="w-5 h-5 text-muted-foreground mr-3 shrink-0" />
                         <Command.Input
                             value={search}
                             onValueChange={setSearch}
-                            placeholder="Search or jump to..."
-                            className="flex-1 h-12 bg-transparent outline-none placeholder:text-muted-foreground"
+                            placeholder="Type a command or search..."
+                            className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-lg font-medium"
                         />
-                        <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                            ESC
-                        </kbd>
+                        <div className="hidden sm:flex items-center gap-2">
+                            <kbd className="hidden sm:inline-flex h-6 select-none items-center gap-1 rounded-full bg-muted/50 px-2.5 font-mono text-[10px] font-medium text-muted-foreground">
+                                ESC
+                            </kbd>
+                        </div>
                     </div>
 
-                    <Command.List className="max-h-80 overflow-y-auto p-2">
-                        <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
+                    <Command.List className="max-h-[60vh] overflow-y-auto p-3 space-y-4">
+                        <Command.Empty className="py-12 text-center text-sm text-muted-foreground">
                             No results found.
                         </Command.Empty>
 
-                        {/* Navigation */}
-                        <Command.Group heading="Navigation" className="text-xs text-muted-foreground px-2 py-1.5">
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/dashboard"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Home className="w-4 h-4" />
-                                <span>Dashboard</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/transcribe"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Mic className="w-4 h-4" />
-                                <span>Transcribe</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/transcripts"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <History className="w-4 h-4" />
-                                <span>History</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/notes"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <BookMarked className="w-4 h-4" />
-                                <span>Notes</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/tasks"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <ListTodo className="w-4 h-4" />
-                                <span>Tasks</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/kanban"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Columns3 className="w-4 h-4" />
-                                <span>Kanban</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/calendar"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Calendar className="w-4 h-4" />
-                                <span>Calendar</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/settings"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Settings className="w-4 h-4" />
-                                <span>Settings</span>
-                            </Command.Item>
+                        <Command.Group heading="Navigation" className="text-xs font-medium text-muted-foreground px-2 mb-2">
+                            <div className="space-y-1 mt-2">
+                                <Item
+                                    icon={Home}
+                                    label="Dashboard"
+                                    onSelect={() => runCommand(() => router.push("/dashboard"))}
+                                />
+                                <Item
+                                    icon={Mic}
+                                    label="Transcribe Audio"
+                                    onSelect={() => runCommand(() => router.push("/transcribe"))}
+                                />
+                                <Item
+                                    icon={BookMarked}
+                                    label="Notes"
+                                    onSelect={() => runCommand(() => router.push("/notes"))}
+                                />
+                                <Item
+                                    icon={ListTodo}
+                                    label="Tasks"
+                                    onSelect={() => runCommand(() => router.push("/tasks"))}
+                                />
+                                <Item
+                                    icon={Calendar}
+                                    label="Calendar"
+                                    onSelect={() => runCommand(() => router.push("/calendar"))}
+                                />
+                                <Item
+                                    icon={Settings}
+                                    label="Settings"
+                                    onSelect={() => runCommand(() => router.push("/settings"))}
+                                />
+                            </div>
                         </Command.Group>
 
-                        {/* Actions */}
-                        <Command.Group heading="Actions" className="text-xs text-muted-foreground px-2 py-1.5 mt-2">
-                            <Command.Item
-                                onSelect={() => runCommand(() => router.push("/notes?new=true"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span>Create New Note</span>
-                            </Command.Item>
-                            <Command.Item
-                                onSelect={() => runCommand(() => setTheme(theme === "dark" ? "light" : "dark"))}
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                            >
-                                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                                <span>Toggle Theme</span>
-                            </Command.Item>
+                        <Command.Group heading="Actions" className="text-xs font-medium text-muted-foreground px-2 mb-2">
+                            <div className="space-y-1 mt-2">
+                                <Item
+                                    icon={Plus}
+                                    label="Create New Note"
+                                    onSelect={() => runCommand(() => router.push("/notes?new=true"))}
+                                />
+                                <Item
+                                    icon={theme === "dark" ? Sun : Moon}
+                                    label={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
+                                    onSelect={() => runCommand(() => setTheme(theme === "dark" ? "light" : "dark"))}
+                                />
+                            </div>
                         </Command.Group>
 
-                        {/* Notes Search Results */}
+                        {/* Recent Notes */}
                         {notes.length > 0 && (
-                            <Command.Group heading="Notes" className="text-xs text-muted-foreground px-2 py-1.5 mt-2">
-                                {notes.map((note) => (
-                                    <Command.Item
-                                        key={note.id}
-                                        value={note.title}
-                                        onSelect={() => runCommand(() => router.push(`/notes?id=${note.id}`))}
-                                        className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                                    >
-                                        <BookMarked className="w-4 h-4 text-muted-foreground" />
-                                        <span className="truncate">{note.title || "Untitled"}</span>
-                                    </Command.Item>
-                                ))}
+                            <Command.Group heading="Recent Notes" className="text-xs font-medium text-muted-foreground px-2 mb-2">
+                                <div className="space-y-1 mt-2">
+                                    {notes.map((note) => (
+                                        <Item
+                                            key={note.id}
+                                            icon={BookMarked}
+                                            label={note.title || "Untitled"}
+                                            value={`note:${note.title}`}
+                                            onSelect={() => runCommand(() => router.push(`/notes?id=${note.id}`))}
+                                        />
+                                    ))}
+                                </div>
                             </Command.Group>
                         )}
 
-                        {/* Tasks Search Results */}
+                        {/* Tasks */}
                         {tasks.length > 0 && (
-                            <Command.Group heading="Pending Tasks" className="text-xs text-muted-foreground px-2 py-1.5 mt-2">
-                                {tasks.map((task) => (
-                                    <Command.Item
-                                        key={task.id}
-                                        value={task.text}
-                                        onSelect={() => runCommand(() => router.push("/tasks"))}
-                                        className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer data-[selected=true]:bg-secondary"
-                                    >
-                                        <ListTodo className="w-4 h-4 text-muted-foreground" />
-                                        <span className="truncate">{task.text}</span>
-                                    </Command.Item>
-                                ))}
+                            <Command.Group heading="Tasks" className="text-xs font-medium text-muted-foreground px-2 mb-2">
+                                <div className="space-y-1 mt-2">
+                                    {tasks.map((task) => (
+                                        <Item
+                                            key={task.id}
+                                            icon={ListTodo}
+                                            label={task.text}
+                                            value={`task:${task.text}`}
+                                            onSelect={() => runCommand(() => router.push("/tasks"))}
+                                        />
+                                    ))}
+                                </div>
                             </Command.Group>
                         )}
                     </Command.List>
 
-                    <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground flex items-center justify-between">
-                        <span>Type to search...</span>
-                        <div className="flex items-center gap-2">
-                            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">↑↓</kbd>
-                            <span>navigate</span>
-                            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">↵</kbd>
-                            <span>select</span>
+                    <div className="border-t border-border/50 bg-muted/30 px-6 py-3 text-[10px] text-muted-foreground flex items-center justify-between backdrop-blur-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5">
+                                <kbd className="h-5 px-1.5 flex items-center justify-center rounded bg-background border border-border/50 shadow-sm font-sans text-xs">↑</kbd>
+                                <kbd className="h-5 px-1.5 flex items-center justify-center rounded bg-background border border-border/50 shadow-sm font-sans text-xs">↓</kbd>
+                                <span>navigate</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <kbd className="h-5 px-1.5 flex items-center justify-center rounded bg-background border border-border/50 shadow-sm font-sans text-xs">↵</kbd>
+                                <span>select</span>
+                            </div>
                         </div>
                     </div>
                 </Command>
@@ -231,3 +211,34 @@ export function CommandPalette() {
         </div>
     )
 }
+
+function Item({
+    icon: Icon,
+    label,
+    value,
+    onSelect
+}: {
+    icon: any,
+    label: string,
+    value?: string,
+    onSelect: () => void
+}) {
+    return (
+        <Command.Item
+            value={value || label}
+            onSelect={onSelect}
+            className={cn(
+                "group flex items-center justify-between px-4 py-3 rounded-full cursor-pointer transition-all",
+                "data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[selected=true]:shadow-md",
+                "text-muted-foreground"
+            )}
+        >
+            <div className="flex items-center gap-3 min-w-0">
+                <Icon className="w-5 h-5 shrink-0 transition-transform group-data-[selected=true]:scale-110" />
+                <span className="font-medium truncate">{label}</span>
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 transition-all group-data-[selected=true]:opacity-100 group-data-[selected=true]:translate-x-0" />
+        </Command.Item>
+    )
+}
+
