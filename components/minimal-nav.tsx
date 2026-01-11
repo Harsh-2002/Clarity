@@ -2,16 +2,20 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, History, Settings, BookMarked } from "lucide-react"
+import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MinimalNav() {
   const pathname = usePathname()
 
   const navItems = [
+    { href: "/dashboard", icon: Home, label: "Home" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
     { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/tasks", icon: ListTodo, label: "Tasks" },
+    { href: "/kanban", icon: Columns3, label: "Kanban" },
+    { href: "/calendar", icon: Calendar, label: "Calendar" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
@@ -23,7 +27,7 @@ export function MinimalNav() {
   }
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-16 hidden md:flex flex-col items-center justify-center gap-8 z-50 bg-background/50 backdrop-blur-sm border-r border-border/50">
+    <nav className="fixed left-0 top-0 h-full w-16 hidden md:flex flex-col items-center justify-center gap-6 z-50 bg-background/50 backdrop-blur-sm border-r border-border/50">
       {navItems.map((item) => {
         const isActive = pathname === item.href
         return (
@@ -38,16 +42,16 @@ export function MinimalNav() {
                 : "text-muted-foreground bg-secondary/30 hover:text-foreground hover:bg-secondary/60 hover:scale-105"
             )}
           >
-            <item.icon 
+            <item.icon
               className={cn(
-                "w-6 h-6 transition-all duration-300",
+                "w-5 h-5 transition-all duration-300",
                 isActive && "animate-pulse",
                 !isActive && "group-hover:scale-110 group-hover:rotate-6"
-              )} 
-              strokeWidth={isActive ? 2.5 : 2} 
+              )}
+              strokeWidth={isActive ? 2.5 : 2}
             />
             <span className="sr-only">{item.label}</span>
-            
+
             {/* Tooltip */}
             <div className="absolute left-full ml-4 px-3 py-1.5 bg-popover text-popover-foreground text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-sm border border-border">
               {item.label}
@@ -63,9 +67,13 @@ export function MobileNav() {
   const pathname = usePathname()
 
   const navItems = [
+    { href: "/dashboard", icon: Home, label: "Home" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
     { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/tasks", icon: ListTodo, label: "Tasks" },
+    { href: "/kanban", icon: Columns3, label: "Kanban" },
+    { href: "/calendar", icon: Calendar, label: "Calendar" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
@@ -93,12 +101,12 @@ export function MobileNav() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon 
+              <item.icon
                 className={cn(
                   "w-5 h-5 transition-transform duration-300",
                   isActive && "scale-110"
-                )} 
-                strokeWidth={isActive ? 2.5 : 2} 
+                )}
+                strokeWidth={isActive ? 2.5 : 2}
               />
               <span className="sr-only">{item.label}</span>
             </Link>

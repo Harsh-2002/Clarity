@@ -4,7 +4,6 @@ export const PROVIDER_CONFIGS: Record<string, Omit<ProviderConfig, "apiKey">> = 
   openai: {
     id: "openai",
     name: "OpenAI",
-    apiKey: "",
     models: {
       transcription: "whisper-1",
       fineTuning: "gpt-4o-mini",
@@ -17,7 +16,6 @@ export const PROVIDER_CONFIGS: Record<string, Omit<ProviderConfig, "apiKey">> = 
   groq: {
     id: "groq",
     name: "Groq",
-    apiKey: "",
     models: {
       transcription: "whisper-large-v3-turbo",
       fineTuning: "llama-3.1-70b-versatile",
@@ -30,7 +28,6 @@ export const PROVIDER_CONFIGS: Record<string, Omit<ProviderConfig, "apiKey">> = 
   assemblyai: {
     id: "assemblyai",
     name: "AssemblyAI",
-    apiKey: "",
     models: {
       transcription: "best",
       fineTuning: "default",
@@ -45,108 +42,51 @@ export const PROVIDER_CONFIGS: Record<string, Omit<ProviderConfig, "apiKey">> = 
 /**
  * Validate API key format for each provider
  */
-export async function validateApiKey(provider: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
+import { apiFetch } from "./storage"
+
+/**
+ * Validate API key format for each provider (via Proxy)
+ */
+export async function validateApiKey(providerId: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
   if (!apiKey || apiKey.trim().length === 0) {
     return { valid: false, error: "API key is required" }
   }
 
   try {
-    switch (provider) {
-      case "openai": {
-        const response = await fetch("https://api.openai.com/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        })
-        if (!response.ok) {
-          return { valid: false, error: "Invalid OpenAI API key" }
-        }
-        return { valid: true }
-      }
-
-      case "groq": {
-        const response = await fetch("https://api.groq.com/openai/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        })
-        if (!response.ok) {
-          return { valid: false, error: "Invalid Groq API key" }
-        }
-        return { valid: true }
-      }
-
-      case "assemblyai": {
-        const response = await fetch("https://api.assemblyai.com/v2/account", {
-          headers: { Authorization: apiKey },
-        })
-        if (!response.ok) {
-          return { valid: false, error: "Invalid AssemblyAI API key" }
-        }
-        return { valid: true }
-      }
-
-      default:
-        return { valid: false, error: "Unknown provider" }
-    }
+    const res = await apiFetch<{ valid: boolean; error?: string }>("/ai/validate", {
+      method: "POST",
+      body: JSON.stringify({ providerId, apiKey })
+    })
+    return res
   } catch (error) {
     return { valid: false, error: "Failed to validate API key" }
   }
 }
 
 /**
- * Fetch available models from provider API
+ * Fetch available models from provider API (via Proxy)
  */
 export async function fetchAvailableModels(
-  provider: string,
-  apiKey: string,
+  providerId: string,
+  apiKey: string, // We accept it to keep signature, but if it's empty we rely on stored key (backend handles logic)
 ): Promise<{ models: string[]; error?: string }> {
-  if (!apiKey || apiKey.trim().length === 0) {
-    return { models: [], error: "API key is required" }
-  }
+
+  // If we have an API key (e.g. testing new setting), validate it. 
+  // But usually this is called with stored key.
+  // The Backend /ai/models endpoint uses STORED key for the providerId.
+  // If we are testing a NEW key, we can't use /ai/models easily unless we pass the key.
+  // But /ai/models endpoint handles stored key. 
+
+  // TODO: Refactor: If we are in "Settings" and checking a new key, we use validateApiKey to check validity.
+  // Then we save. Then we fetch models.
+  // This function assumes we are fetching models for a SAVED provider.
 
   try {
-    switch (provider) {
-      case "openai": {
-        const response = await fetch("https://api.openai.com/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        })
-        if (!response.ok) {
-          return { models: [], error: "Failed to fetch models from OpenAI" }
-        }
-        const data = await response.json()
-        // Filter for models that support chat/completions
-        const models = data.data
-          .filter(
-            (m: any) =>
-              m.id.includes("gpt") ||
-              m.id.includes("whisper") ||
-              m.id.includes("text-davinci") ||
-              m.id.includes("davinci"),
-          )
-          .map((m: any) => m.id)
-          .sort()
-        return { models }
-      }
-
-      case "groq": {
-        const response = await fetch("https://api.groq.com/openai/v1/models", {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        })
-        if (!response.ok) {
-          return { models: [], error: "Failed to fetch models from Groq" }
-        }
-        const data = await response.json()
-        const models = data.data.map((m: any) => m.id).sort()
-        return { models }
-      }
-
-      case "assemblyai": {
-        // AssemblyAI doesn't have a models endpoint, return recommended models
-        return {
-          models: ["best", "default", "nano"],
-        }
-      }
-
-      default:
-        return { models: [], error: "Unknown provider" }
-    }
+    const res = await apiFetch<{ models: string[] }>("/ai/models", {
+      method: "POST",
+      body: JSON.stringify({ providerId, apiKey })
+    })
+    return { models: res.models }
   } catch (error) {
     return { models: [], error: error instanceof Error ? error.message : "Failed to fetch models" }
   }

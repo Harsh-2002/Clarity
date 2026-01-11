@@ -26,44 +26,45 @@ export function FinetunedPageContent() {
   useEffect(() => {
     if (isInitialized) return
 
-    const settings = getSettings()
-    if (!settings.onboardingComplete) {
-      router.push("/onboarding")
-    } else {
-      setIsOnboarded(true)
-      setIsInitialized(true)
+    const checkStatus = async () => {
+      try {
+        const settings = await getSettings()
+        if (!settings.onboardingComplete) {
+          router.push("/onboarding")
+        } else {
+          setIsOnboarded(true)
+          setIsInitialized(true)
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message === "Unauthorized") {
+          router.replace("/login")
+        }
+      }
     }
+    checkStatus()
   }, [isInitialized, router])
 
   useEffect(() => {
     if (!isOnboarded || !isInitialized || !transcriptId) return
 
-    const transcripts = getTranscripts()
-    const found = transcripts.find((t) => t.id === transcriptId)
-    if (found) {
-      setTranscript(found)
-      const settings = getSettings()
-      setCustomPrompt(settings.customSystemPrompt)
-    } else {
-      setError("Transcript not found")
-      setState("error")
-    }
-  }, [isOnboarded, isInitialized, transcriptId])
-
-  // Keyboard shortcut: Ctrl/Cmd+Enter to start finetuning
-  useEffect(() => {
-    if (state !== "input") return
-
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        e.preventDefault()
-        handleStartFinetuning()
+    const loadData = async () => {
+      try {
+        const transcripts = await getTranscripts()
+        const found = transcripts.find((t) => t.id === transcriptId)
+        if (found) {
+          setTranscript(found)
+          const settings = await getSettings()
+          setCustomPrompt(settings.customSystemPrompt || "")
+        } else {
+          setError("Transcript not found")
+          setState("error")
+        }
+      } catch (err) {
+        console.error("Failed to load transcript", err)
       }
     }
-
-    window.addEventListener("keydown", handleKeyPress)
-    return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [state, handleStartFinetuning])
+    loadData()
+  }, [isOnboarded, isInitialized, transcriptId])
 
   const handleStartFinetuning = useCallback(async () => {
     if (!transcript) return
@@ -81,6 +82,21 @@ export function FinetunedPageContent() {
       setState("result")
     }
   }, [transcript, customPrompt])
+
+  // Keyboard shortcut: Ctrl/Cmd+Enter to start finetuning
+  useEffect(() => {
+    if (state !== "input") return
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault()
+        handleStartFinetuning()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [state, handleStartFinetuning])
 
   const handleAccept = useCallback(() => {
     if (!finetune || !transcript) return

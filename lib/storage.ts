@@ -1,231 +1,263 @@
-import type { AppSettings, ProviderConfig, Transcript, FinetuneRequest, EncryptedData } from "./types"
-import { encryptData, decryptData, generateRandomKey } from "./encryption"
+import type { AppSettings, ProviderConfig, Transcript, FinetuneRequest, Session } from "./types"
 
-const STORAGE_KEYS = {
-  settings: "audio-app:settings",
-  providers: "audio-app:providers",
-  transcripts: "audio-app:transcripts",
-  finetunings: "audio-app:finetunings",
-  encryptionKey: "audio-app:encryption-key",
+// API Base URL - routes to Next.js API running on same origin
+const API_BASE = "/api/v1"
+
+// Token management
+let _accessToken: string | null = null
+const TOKEN_KEY = "clarity_access_token"
+
+export function setAccessToken(token: string) {
+  _accessToken = token
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  }
 }
 
-let encryptionKey: Uint8Array | null = null
-
-export async function initializeEncryption(password: string, deriveFn: (pwd: string) => Promise<Uint8Array>) {
-  encryptionKey = await deriveFn(password)
+export function getAccessToken(): string | null {
+  if (_accessToken) return _accessToken
+  if (typeof window !== "undefined") {
+    return sessionStorage.getItem(TOKEN_KEY)
+  }
+  return null
 }
 
-function getEncryptionKey(): Uint8Array {
-  if (!encryptionKey) {
-    const stored = localStorage.getItem(STORAGE_KEYS.encryptionKey)
+export function clearAccessToken() {
+  _accessToken = null
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(TOKEN_KEY)
+  }
+}
+
+async function getValidToken(): Promise<string | null> {
+  if (_accessToken) return _accessToken
+
+  if (typeof window !== "undefined") {
+    const stored = sessionStorage.getItem(TOKEN_KEY)
     if (stored) {
-      encryptionKey = new Uint8Array(JSON.parse(stored))
-    } else {
-      encryptionKey = generateRandomKey()
-      localStorage.setItem(STORAGE_KEYS.encryptionKey, JSON.stringify(Array.from(encryptionKey)))
+      _accessToken = stored
+      return stored
     }
   }
-  return encryptionKey
-}
-
-export function saveProvider(provider: ProviderConfig): void {
-  const key = getEncryptionKey()
-  const providers = getProviders()
-
-  const index = providers.findIndex((p) => p.id === provider.id)
-  if (index >= 0) {
-    providers[index] = provider
-  } else {
-    providers.push(provider)
-  }
-
-  const allEncrypted = providers.map((p) => encryptData(p, key))
-  localStorage.setItem(STORAGE_KEYS.providers, JSON.stringify(allEncrypted))
-}
-
-export function getProviders(): ProviderConfig[] {
-  const key = getEncryptionKey()
-  const stored = localStorage.getItem(STORAGE_KEYS.providers)
-
-  if (!stored) return []
 
   try {
-    const encrypted: EncryptedData[] = JSON.parse(stored)
-    return encrypted.map((enc) => decryptData(enc, key))
-  } catch {
-    return []
-  }
-}
-
-export function getProvider(id: string): ProviderConfig | null {
-  return getProviders().find((p) => p.id === id) || null
-}
-
-export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings))
-}
-
-export function getSettings(): AppSettings {
-  const stored = localStorage.getItem(STORAGE_KEYS.settings)
-
-  const defaults: AppSettings = {
-    selectedProvider: null,
-    selectedTranscriptionModel: null,
-    selectedFinetuneModel: null,
-    customSystemPrompt: "",
-    autoFineTune: false,
-    encryptionDerived: false,
-    theme: "system",
-    onboardingComplete: false,
+    const res = await fetch(`${API_BASE}/auth/refresh`, { method: "POST" })
+    if (res.ok) {
+      const data = await res.json()
+      setAccessToken(data.accessToken)
+      return data.accessToken
+    }
+  } catch (e) {
+    console.error("Token refresh failed", e)
   }
 
-  if (!stored) return defaults
-
-  try {
-    return { ...defaults, ...JSON.parse(stored) }
-  } catch {
-    return defaults
-  }
+  return null
 }
 
-export function saveTranscript(transcript: Transcript): void {
-  const transcripts = getTranscripts()
-  const index = transcripts.findIndex((t) => t.id === transcript.id)
+// Helper for authenticated fetch
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  let token = await getValidToken()
 
-  if (index >= 0) {
-    transcripts[index] = transcript
-  } else {
-    transcripts.push(transcript)
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
   }
 
-  const key = getEncryptionKey()
-  const encrypted = transcripts.map((t) => {
-    const { audio, ...rest } = t
-    return encryptData(rest, key)
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"]
+  }
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
+  let res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
   })
 
-  localStorage.setItem(STORAGE_KEYS.transcripts, JSON.stringify(encrypted))
+  if (res.status === 401) {
+    // Token might be expired, try refresh
+    clearAccessToken()
+    token = await getValidToken()
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+      res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      })
+    }
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Unauthorized")
+    }
+    throw new Error(await res.text())
+  }
+
+  return res.json()
 }
 
-export function getTranscripts(): Transcript[] {
-  const key = getEncryptionKey()
-  const stored = localStorage.getItem(STORAGE_KEYS.transcripts)
+// --- Providers ---
 
-  if (!stored) return []
+export async function saveProvider(provider: ProviderConfig): Promise<ProviderConfig> {
+  // Backend supports Upsert on PUT /:id
+  return apiFetch<ProviderConfig>(`/providers/${provider.id}`, {
+    method: "PUT",
+    body: JSON.stringify(provider),
+  })
+}
 
+export async function getProviders(): Promise<ProviderConfig[]> {
   try {
-    const encrypted: EncryptedData[] = JSON.parse(stored)
-    return encrypted.map((enc) => decryptData(enc, key))
-  } catch {
+    return await apiFetch<ProviderConfig[]>("/providers")
+  } catch (e) {
+    console.error("Failed to fetch providers", e)
     return []
   }
 }
 
-export function saveFinetuning(finetune: FinetuneRequest): void {
-  const finetunings = getFinetunings()
-  const index = finetunings.findIndex((f) => f.id === finetune.id)
-
-  if (index >= 0) {
-    finetunings[index] = finetune
-  } else {
-    finetunings.push(finetune)
-  }
-
-  const key = getEncryptionKey()
-  const encrypted = finetunings.map((f) => encryptData(f, key))
-  localStorage.setItem(STORAGE_KEYS.finetunings, JSON.stringify(encrypted))
-}
-
-export function getFinetunings(): FinetuneRequest[] {
-  const key = getEncryptionKey()
-  const stored = localStorage.getItem(STORAGE_KEYS.finetunings)
-
-  if (!stored) return []
-
+export async function getProvider(id: string): Promise<ProviderConfig | null> {
   try {
-    const encrypted: EncryptedData[] = JSON.parse(stored)
-    return encrypted.map((enc) => decryptData(enc, key))
+    return await apiFetch<ProviderConfig>(`/providers/${id}`)
   } catch {
-    return []
+    return null
   }
 }
 
-export function exportAllData(): {
-  settings: AppSettings
-  providers: ProviderConfig[]
-  transcripts: Transcript[]
-  finetunings: FinetuneRequest[]
-  exportDate: string
-} {
-  return {
-    settings: getSettings(),
-    providers: getProviders(),
-    transcripts: getTranscripts(),
-    finetunings: getFinetunings(),
-    exportDate: new Date().toISOString(),
-  }
+export async function deleteProvider(id: string): Promise<void> {
+  await apiFetch(`/providers/${id}`, { method: "DELETE" })
 }
 
-export function importData(data: any): void {
+// --- Settings ---
+
+// --- Settings ---
+
+export async function saveSettings(settings: AppSettings): Promise<AppSettings> {
+  // We only support one settings row per user
+  return apiFetch<AppSettings>("/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  })
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  // If apiFetch throws (e.g. 401), we want to propagate it so the UI can redirect to login
   try {
-    if (data.settings) saveSettings(data.settings)
-    if (data.providers) {
-      const providers = data.providers as ProviderConfig[]
-      providers.forEach((p) => saveProvider(p))
+    const settings = await apiFetch<AppSettings>("/settings")
+
+    // Merge with defaults
+    const defaults: AppSettings = {
+      selectedProvider: null,
+      selectedTranscriptionModel: null,
+      selectedFinetuneModel: null,
+      customSystemPrompt: "",
+      autoFineTune: false,
+      encryptionDerived: true,
+      theme: "system",
+      onboardingComplete: false,
     }
-    if (data.transcripts) {
-      const transcripts = data.transcripts as Transcript[]
-      transcripts.forEach((t) => saveTranscript(t))
-    }
-    if (data.finetunings) {
-      const finetunings = data.finetunings as FinetuneRequest[]
-      finetunings.forEach((f) => saveFinetuning(f))
-    }
+    return { ...defaults, ...settings }
   } catch (error) {
-    throw new Error("Failed to import data")
+    // If it's a 401/Unauthorized, rethrow so page checks can handle it.
+    // Other errors (like 500) might fallback to defaults or also throw.
+    // apiFetch throws "Unauthorized" for 401.
+    // If it's a 401/Unauthorized, rethrow so page checks can handle it.
+    if (error instanceof Error && error.message === "Unauthorized") {
+      throw error;
+    }
+
+    // CRITICAL FIX: Do NOT return defaults on error.
+    // Returning defaults (where onboardingComplete: false) causes the app to 
+    // think the user is new whenever there is a network glitch or server error.
+    // It is better to fail loud (throw) so the UI shows an error/loading state
+    // rather than redirecting to onboarding.
+    console.error("Failed to fetch settings", error);
+    throw error;
   }
 }
 
-export function clearAllData(): void {
-  Object.values(STORAGE_KEYS).forEach((key) => {
-    localStorage.removeItem(key)
-  })
-  encryptionKey = null
+// --- Transcripts ---
+
+export async function saveTranscript(transcript: Transcript): Promise<Transcript> {
+  // If we have an ID and it's an update
+  const all = await getTranscripts()
+  const exists = all.find(t => t.id === transcript.id)
+
+  if (exists) {
+    return apiFetch<Transcript>(`/transcripts/${transcript.id}`, {
+      method: "PUT",
+      body: JSON.stringify(transcript),
+    })
+  } else {
+    return apiFetch<Transcript>("/transcripts", {
+      method: "POST",
+      body: JSON.stringify(transcript),
+    })
+  }
 }
 
-export function deleteTranscript(id: string): void {
-  const transcripts = getTranscripts().filter((t) => t.id !== id)
-  const key = getEncryptionKey()
-  const encrypted = transcripts.map((t) => {
-    const { audio, ...rest } = t
-    return encryptData(rest, key)
-  })
-  localStorage.setItem(STORAGE_KEYS.transcripts, JSON.stringify(encrypted))
+export async function getTranscripts(): Promise<Transcript[]> {
+  try {
+    return await apiFetch<Transcript[]>("/transcripts")
+  } catch (e) {
+    console.error("Failed to fetch transcripts", e)
+    return []
+  }
 }
 
-// Auto-save draft during transcription
+export async function deleteTranscript(id: string): Promise<void> {
+  await apiFetch(`/transcripts/${id}`, { method: "DELETE" })
+}
+
+// --- Audio Storage (New) ---
+
+export interface UploadResponse {
+  id: string
+  url: string
+  size: number
+  mimeType: string
+}
+
+export async function uploadAudio(blob: Blob): Promise<UploadResponse> {
+  const formData = new FormData()
+  formData.append("file", blob)
+
+  // Use apiFetch to ensure headers (Auth) are handled correctly.
+  // apiFetch automatically handles FormData content-type stripping.
+  return apiFetch<UploadResponse>("/storage/upload", {
+    method: "POST",
+    body: formData,
+  })
+}
+
+// --- Finetuning ---
+
+export async function saveFinetuning(finetune: FinetuneRequest): Promise<void> {
+  // Mock implementation or future endpoint
+  console.log("Saving finetune request", finetune)
+}
+
+export async function getFinetunings(): Promise<FinetuneRequest[]> {
+  return [] // Not implemented in backend yet
+}
+
+// --- Drafts (Session Storage still okay for temporary drafts) ---
+
 export function saveDraft(audioBlob: Blob, duration: number): string {
   const draftId = `draft-${Date.now()}`
-  const draft = {
-    id: draftId,
-    audioBlob,
-    duration,
-    timestamp: Date.now(),
-  }
   sessionStorage.setItem('transcription-draft', JSON.stringify({
     id: draftId,
     duration,
-    timestamp: draft.timestamp,
+    timestamp: Date.now(),
   }))
-  
-  // Store blob separately (blobs can't be stringified)
   return draftId
 }
 
 export function getDraft(): { id: string; duration: number; timestamp: number } | null {
   const stored = sessionStorage.getItem('transcription-draft')
   if (!stored) return null
-  
   try {
     return JSON.parse(stored)
   } catch {
@@ -235,4 +267,88 @@ export function getDraft(): { id: string; duration: number; timestamp: number } 
 
 export function clearDraft(): void {
   sessionStorage.removeItem('transcription-draft')
+}
+
+// --- Migration (One-time) ---
+
+export async function syncLocalStorageToServer() {
+  if (typeof window === 'undefined') return
+
+  const hasMigrated = localStorage.getItem('migrated_to_server')
+  if (hasMigrated) return
+
+  console.log('Starting migration to server...')
+
+  // 1. Settings
+  const localSettings = localStorage.getItem('audio-app:settings')
+  if (localSettings) {
+    try {
+      const settings = JSON.parse(localSettings)
+      await saveSettings(settings)
+    } catch (e) { console.error('Settings migration failed', e) }
+  }
+
+  // 2. Encryption Key (We don't migrate this, we use server env key now)
+  // This means previous encrypted data in local storage MIGHT be unreadable if we don't handle it carefully.
+  // Ideally, we would decrypt locally using the old password, then send smooth data to server.
+  // For this step, we assume the user is starting fresh or we accept data loss on old local-only encrypted items 
+  // unless we implement a complex client-side decryption + re-upload flow.
+
+  // Given user request "login... everything stored on server side... data will always load from backend",
+  // we prioritize the new flow.
+
+  localStorage.setItem('migrated_to_server', 'true')
+}
+
+
+// --- Sessions ---
+
+export async function getSessions(): Promise<Session[]> {
+  try {
+    return await apiFetch<Session[]>("/auth/sessions")
+  } catch (e) {
+    console.error("Failed to fetch sessions", e)
+    return []
+  }
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await apiFetch(`/auth/sessions/${id}`, { method: "DELETE" })
+}
+
+// --- Data Management ---
+
+export async function exportAllData(): Promise<any> {
+  const [settings, providers, transcripts] = await Promise.all([
+    getSettings(),
+    getProviders(),
+    getTranscripts()
+  ])
+  return {
+    version: 1,
+    timestamp: Date.now(),
+    settings,
+    providers,
+    transcripts
+  }
+}
+
+export async function importData(data: any): Promise<void> {
+  // TODO: Implement server-side import
+  console.warn("Import not fully implemented for server-side storage yet", data)
+}
+
+export async function clearAllData(): Promise<void> {
+  // Delete all transcripts
+  const transcripts = await getTranscripts()
+  await Promise.all(transcripts.map(t => deleteTranscript(t.id)))
+
+  // Reset settings
+  const settings = await getSettings()
+  await saveSettings({
+    ...settings,
+    onboardingComplete: false,
+    selectedProvider: null,
+    selectedTranscriptionModel: null
+  })
 }

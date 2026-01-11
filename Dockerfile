@@ -1,37 +1,29 @@
-# ---- Build Stage ----
-# Use an official Node.js runtime as the base image
-FROM node:24-alpine AS build
-
-# Set the working directory in the container
+FROM node:24-alpine AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Copy package.json and pnpm-lock.yaml to the working directory
 COPY package.json pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
-# Install project dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy the rest of the application source code to the working directory
+FROM node:24-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable pnpm && pnpm run build && \
+    find .next/standalone -name "@img+sharp-linux-x64*" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find .next/standalone -name "@img+sharp-libvips-linux-x64*" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find .next/standalone -name "*.map" -delete 2>/dev/null || true
 
-# Build the Next.js application for production (static export)
-RUN pnpm build
-
-# ---- Production Stage ----
-# Use the official Caddy image for a lean production server
-FROM caddy:2-alpine
-
-# Copy the built static files from the build stage to Caddy's webroot
-COPY --from=build /app/out /usr/share/caddy
-
-# Copy the Caddyfile configuration
-COPY Caddyfile /etc/caddy/Caddyfile
-
-# Format the Caddyfile
-RUN caddy fmt --overwrite /etc/caddy/Caddyfile
-
-# Expose the port Caddy will listen on
-EXPOSE 8080
+FROM node:24-alpine
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+RUN apk add --no-cache tini && rm -rf /var/cache/apk/*
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/drizzle ./drizzle
+RUN mkdir -p /app/data
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s CMD wget -qO- http://localhost:3000/api/v1/health || exit 1
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "server.js"]

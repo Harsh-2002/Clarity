@@ -1,11 +1,11 @@
 import type { Transcript } from "./types"
-import { getProvider, saveTranscript, getSettings } from "./storage"
+import { getProvider, saveTranscript, getSettings, apiFetch } from "./storage"
 import { chunkAudio, mergeChunkTranscriptions } from "./audio-chunker"
 import { PROVIDER_CONFIGS } from "./providers"
 import { retryWithBackoff, isRetryableError, getActionableErrorMessage } from "./retry"
 
-async function transcribeWithOpenAI(
-  apiKey: string,
+async function transcribeWithProxy(
+  providerId: string,
   audioBlob: Blob,
   model: string,
   fileName: string = "audio.webm",
@@ -16,175 +16,45 @@ async function transcribeWithOpenAI(
         const formData = new FormData()
         formData.append("file", audioBlob, fileName)
         formData.append("model", model)
+        formData.append("providerId", providerId)
 
-        const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        // Use apiFetch to handle Auth. apiFetch in storage.ts has been updated to handle FormData
+        // (stripping Content-Type header so browser sets boundary)
+        const data = await apiFetch<{ text: string }>("/ai/transcribe", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
           body: formData,
         })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          const error: any = new Error(
-            errorData.error?.message || `OpenAI transcription failed (${response.status})`
-          )
-          error.status = response.status
-          error.details = errorData
-          throw error
-        }
-
-        const data = await response.json()
         return { text: data.text, success: true }
       },
       { shouldRetry: isRetryableError }
     )
     return result
   } catch (error) {
-    console.error('[Clarity] OpenAI transcription error:', error)
-    return { 
-      text: "", 
-      success: false, 
+    console.error(`[Clarity] ${providerId} transcription error:`, error)
+    return {
+      text: "",
+      success: false,
       error: getActionableErrorMessage(error, "transcription")
     }
-  }
-}
-
-async function transcribeWithGroq(
-  apiKey: string,
-  audioBlob: Blob,
-  model: string,
-  fileName: string = "audio.webm",
-): Promise<{ text: string; success: boolean; error?: string }> {
-  try {
-    const result = await retryWithBackoff(
-      async () => {
-        const formData = new FormData()
-        formData.append("file", audioBlob, fileName)
-        formData.append("model", model)
-
-        const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: formData,
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          const error: any = new Error(
-            errorData.error?.message || `Groq transcription failed (${response.status})`
-          )
-          error.status = response.status
-          error.details = errorData
-          throw error
-        }
-
-        const data = await response.json()
-        return { text: data.text, success: true }
-      },
-      { shouldRetry: isRetryableError }
-    )
-    return result
-  } catch (error) {
-    console.error('[Clarity] Groq transcription error:', error)
-    return { 
-      text: "", 
-      success: false, 
-      error: getActionableErrorMessage(error, "transcription")
-    }
-  }
-}
-
-async function transcribeWithAssemblyAI(
-  apiKey: string,
-  audioBlob: Blob,
-): Promise<{ text: string; success: boolean; error?: string }> {
-  try {
-    // Upload to AssemblyAI
-    const uploadResponse = await fetch("https://api.assemblyai.com/v2/upload", {
-      method: "POST",
-      headers: {
-        Authorization: apiKey,
-      },
-      body: audioBlob,
-    })
-
-    if (!uploadResponse.ok) {
-      return { text: "", success: false, error: "AssemblyAI upload failed" }
-    }
-
-    const uploadData = await uploadResponse.json()
-    const uploadUrl = uploadData.upload_url
-
-    // Request transcription
-    const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
-      method: "POST",
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        audio_url: uploadUrl,
-      }),
-    })
-
-    if (!transcriptResponse.ok) {
-      return { text: "", success: false, error: "AssemblyAI transcription request failed" }
-    }
-
-    const transcriptData = await transcriptResponse.json()
-    const transcriptId = transcriptData.id
-
-    // Poll for completion
-    let completed = false
-    let transcript = transcriptData
-    let attempts = 0
-    const maxAttempts = 60
-
-    while (!completed && attempts < maxAttempts) {
-      const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-        headers: {
-          Authorization: apiKey,
-        },
-      })
-
-      if (pollResponse.ok) {
-        transcript = await pollResponse.json()
-        if (transcript.status === "completed") {
-          completed = true
-        } else if (transcript.status === "error") {
-          return { text: "", success: false, error: "AssemblyAI transcription error" }
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-          attempts++
-        }
-      }
-    }
-
-    if (!completed) {
-      return { text: "", success: false, error: "AssemblyAI transcription timeout" }
-    }
-
-    return { text: transcript.text || "", success: true }
-  } catch (error) {
-    return { text: "", success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
 
 export async function transcribeAudio(
   audioBlob: Blob,
   audioFileName: string,
+  duration: number, // Added duration
+  fileId?: string, // Added optional fileId linked to server storage
 ): Promise<{ transcript: Transcript | null; error?: string }> {
-  const settings = getSettings()
+  const settings = await getSettings()
 
   if (!settings.selectedProvider || !settings.selectedTranscriptionModel) {
     return { transcript: null, error: "Provider not configured" }
   }
 
-  const provider = getProvider(settings.selectedProvider)
+  // We don't strictly *need* the provider details here anymore since the proxy resolves keys, 
+  // but we should verify the provider exists in our local cache or fetch it to fail early/get nice errors.
+  const provider = await getProvider(settings.selectedProvider)
   if (!provider) {
     return { transcript: null, error: "Provider not found" }
   }
@@ -192,76 +62,77 @@ export async function transcribeAudio(
   const providerConfig = PROVIDER_CONFIGS[settings.selectedProvider]
   const maxFileSize = providerConfig.limits.maxFileSize
 
-  // Check if chunking is needed
   let transcriptionText = ""
-  
-  if (audioBlob.size > maxFileSize) {
-    // Split audio into chunks with 2-second overlap
-    const chunks = await chunkAudio(audioBlob, maxFileSize, 2)
-    const chunkResults: Array<{ text: string; startTime: number; endTime: number }> = []
+  let isSuccess = false
+  let errorMessage = ""
 
-    for (const chunk of chunks) {
-      let chunkResult
-      switch (settings.selectedProvider) {
-        case "openai":
-          chunkResult = await transcribeWithOpenAI(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel, audioFileName)
-          break
-        case "groq":
-          chunkResult = await transcribeWithGroq(provider.apiKey, chunk.blob, settings.selectedTranscriptionModel, audioFileName)
-          break
-        case "assemblyai":
-          chunkResult = await transcribeWithAssemblyAI(provider.apiKey, chunk.blob)
-          break
-        default:
-          return { transcript: null, error: "Unknown provider" }
+  // Simplified logic: Always use Proxy.
+  try {
+    if (audioBlob.size > maxFileSize) {
+      // For now, fail fast or try anyway? 
+      // Let's rely on standard chunking but calling the proxy for each chunk.
+      // This is safe because proxy just forwards the file.
+      const chunks = await chunkAudio(audioBlob, maxFileSize, 2)
+      const chunkResults: Array<{ text: string; startTime: number; endTime: number }> = []
+
+      for (const chunk of chunks) {
+        const chunkResult = await transcribeWithProxy(
+          settings.selectedProvider,
+          chunk.blob,
+          settings.selectedTranscriptionModel,
+          audioFileName
+        )
+
+        if (!chunkResult.success) {
+          throw new Error(`Chunk ${chunk.index + 1} failed: ${chunkResult.error}`);
+        }
+
+        chunkResults.push({
+          text: chunkResult.text,
+          startTime: chunk.startTime,
+          endTime: chunk.endTime,
+        })
       }
+      transcriptionText = mergeChunkTranscriptions(chunkResults, 2)
+      isSuccess = true;
+    } else {
+      const result = await transcribeWithProxy(
+        settings.selectedProvider,
+        audioBlob,
+        settings.selectedTranscriptionModel,
+        audioFileName
+      )
 
-      if (!chunkResult.success) {
-        return { transcript: null, error: `Chunk ${chunk.index + 1} failed: ${chunkResult.error}` }
+      if (!result.success) {
+        throw new Error(result.error);
       }
-
-      chunkResults.push({
-        text: chunkResult.text,
-        startTime: chunk.startTime,
-        endTime: chunk.endTime,
-      })
+      transcriptionText = result.text;
+      isSuccess = true;
     }
-
-    // Merge chunk transcriptions
-    transcriptionText = mergeChunkTranscriptions(chunkResults, 2)
-  } else {
-    // Process as single file
-    let transcriptionResult
-    switch (settings.selectedProvider) {
-      case "openai":
-        transcriptionResult = await transcribeWithOpenAI(provider.apiKey, audioBlob, settings.selectedTranscriptionModel, audioFileName)
-        break
-      case "groq":
-        transcriptionResult = await transcribeWithGroq(provider.apiKey, audioBlob, settings.selectedTranscriptionModel, audioFileName)
-        break
-      case "assemblyai":
-        transcriptionResult = await transcribeWithAssemblyAI(provider.apiKey, audioBlob)
-        break
-      default:
-        return { transcript: null, error: "Unknown provider" }
-    }
-
-    if (!transcriptionResult.success) {
-      return { transcript: null, error: transcriptionResult.error }
-    }
-
-    transcriptionText = transcriptionResult.text
+  } catch (e) {
+    isSuccess = false;
+    errorMessage = e instanceof Error ? e.message : "Unknown error";
+    console.error("Transcription failed check:", e);
   }
 
+  // Create transcript object even if failed (Failsafe)
   const transcript: Transcript = {
     id: Date.now().toString(),
-    recordingId: Date.now().toString(),
+    recordingId: fileId || Date.now().toString(), // Use the server fileId if available!
     text: transcriptionText,
     provider: settings.selectedProvider,
     model: settings.selectedTranscriptionModel,
     createdAt: Date.now(),
+    status: isSuccess ? 'completed' : 'failed',
+    duration: duration,
   }
 
-  saveTranscript(transcript)
-  return { transcript }
+  // Save it
+  saveTranscript(transcript);
+
+  if (!isSuccess) {
+    return { transcript, error: errorMessage }; // Return transcript AND error
+  }
+
+  return { transcript };
 }

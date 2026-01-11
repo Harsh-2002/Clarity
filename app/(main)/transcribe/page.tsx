@@ -31,12 +31,7 @@ export default function TranscribePage() {
 
   // Restore background processing state on mount
   useEffect(() => {
-    const settings = getSettings()
-    if (!settings.onboardingComplete) {
-      router.push("/onboarding")
-      return
-    }
-    
+    // AuthGuard guarantees onboardingComplete is true
     setIsOnboarded(true)
 
     // Check for ongoing background task
@@ -44,7 +39,7 @@ export default function TranscribePage() {
     if (taskData) {
       try {
         const task: BackgroundTask = JSON.parse(taskData)
-        
+
         // Only restore if task is recent (within 10 minutes)
         const elapsed = Date.now() - task.startedAt
         if (elapsed < 10 * 60 * 1000) {
@@ -52,7 +47,7 @@ export default function TranscribePage() {
           setState(task.state)
           if (task.transcript) setTranscript(task.transcript)
           if (task.error) setError(task.error)
-          
+
           // If was processing, show appropriate loading state
           if (task.state === 'transcribing' || task.state === 'finetuning') {
             // Task may have completed while away, check if transcript exists
@@ -94,32 +89,35 @@ export default function TranscribePage() {
     }
   }, [state, error, transcript])
 
-  const handleAudioReady = async (audioBlob: Blob, fileName: string) => {
+  const handleAudioReady = async (audioBlob: Blob, fileName: string, duration: number, fileId?: string) => {
     // Prevent duplicate processing
     if (state !== "input" || processingRef.current) return
-    
+
     processingRef.current = true
     setState("transcribing")
     setError(null)
 
     try {
-      const result = await transcribeAudio(audioBlob, fileName)
+      // Pass fileId to ensure persistence even on failure
+      const result = await transcribeAudio(audioBlob, fileName, duration, fileId)
 
-      if (result.error) {
-        setError(result.error)
-        setState("error")
-        return
-      }
-
+      // If we have a transcript (even if failed), we proceed to result view
       if (result.transcript) {
-        const settings = getSettings()
-        
-        // Auto fine-tune if enabled and model is configured
-        if (settings.autoFineTune && settings.selectedFinetuneModel) {
+        // If there was an error but we saved the transcript, show it as part of the result
+        if (result.error) {
+          console.warn("Transcription failed but saved as failed record:", result.error)
+        }
+
+        const settings = await import('@/lib/storage').then(m => m.getSettings())
+
+        // No need to manually attach recordingId anymore, service does it request
+
+        // Auto fine-tune ONLY if successful
+        if (!result.error && settings.autoFineTune && settings.selectedFinetuneModel) {
           setState("finetuning")
-          
           const fineTuneResult = await fineTuneText(result.transcript.text)
-          
+          // ... (existing finetune logic) ...
+
           if (fineTuneResult.success && fineTuneResult.fineTunedText) {
             console.log('[Clarity] Fine-tune result tags:', fineTuneResult.tags)
             const updatedTranscript = {
@@ -132,12 +130,14 @@ export default function TranscribePage() {
             setTranscript(updatedTranscript)
           } else {
             // If fine-tuning fails, just show the raw transcript
+            saveTranscript(result.transcript)
             setTranscript(result.transcript)
           }
         } else {
+          saveTranscript(result.transcript)
           setTranscript(result.transcript)
         }
-        
+
         setState("result")
       }
     } catch (err) {
@@ -192,7 +192,7 @@ export default function TranscribePage() {
     <main className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-3xl transition-all duration-500">
-          
+
           {state === "input" && (
             <div className="animate-in fade-in zoom-in-95 duration-500">
               <RecorderContainer onAudioReady={handleAudioReady} />
@@ -210,8 +210,8 @@ export default function TranscribePage() {
                   {state === "transcribing" ? "Transcribing..." : "Refining..."}
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  {state === "transcribing" 
-                    ? "Converting your audio to text" 
+                  {state === "transcribing"
+                    ? "Converting your audio to text"
                     : "Polishing grammar and clarity"}
                 </p>
                 <p className="text-xs text-muted-foreground/60 pt-4">

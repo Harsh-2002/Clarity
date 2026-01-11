@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Standalone output for Docker optimization
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
-  distDir: 'out',
+  // Externalize native modules so they can be managed by DockerOS or rebuilt
+  serverExternalPackages: ['better-sqlite3'],
+
 }
 
 export default nextConfig

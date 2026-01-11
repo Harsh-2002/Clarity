@@ -69,8 +69,29 @@ export function RecorderControls({ onRecordingComplete }: RecorderControlsProps)
   const handleStopRecording = async () => {
     if (!recorder) return
 
-    const audioBlob = await recorder.stopRecording()
-    onRecordingComplete(audioBlob, recordingState.duration)
+    try {
+      const audioBlob = await recorder.stopRecording()
+      const { id: fileId } = await import('@/lib/storage').then(m => m.uploadAudio(audioBlob))
+
+      // We pass the uploaded file ID as the "blob" url for now or modify the handler to accept ID
+      // But the cleaner way is to keep the blob for immediate local playback if needed,
+      // and pass the file ID as an additional param.
+      // However, the interface demands (blob, duration). 
+      // Let's modify the interface in a separate step if needed, but for now we can attach the ID to the blob?
+      // No, let's just upload here and pass the blob props.
+      // Wait, the parent component handles the "saveTranscript". 
+      // We need to change the parent to expect a fileId OR change the interface here.
+
+      // Let's attach the fileId to the blob object to avoid breaking signature immediately
+      // (audioBlob as any).fileId = fileId; 
+
+      // Actually, let's update the prop signature. It's cleaner.
+      onRecordingComplete(audioBlob, recordingState.duration, fileId)
+    } catch (err) {
+      setError("Failed to upload recording")
+      console.error(err)
+    }
+
     setRecordingState({
       isRecording: false,
       isPaused: false,

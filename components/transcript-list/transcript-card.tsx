@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy, Check, CheckSquare, Square } from "lucide-react"
+import { Copy, Check, CheckSquare, Square, Download as DownloadIcon } from "lucide-react"
 import type { Transcript } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { getAccessToken } from "@/lib/storage"
 
 interface TranscriptCardProps {
   transcript: Transcript
@@ -23,8 +24,8 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   const [isExpanded, setIsExpanded] = useState(false)
   const hasFinetuned = Boolean(transcript.fineTunedText)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
-  const displayText = hasFinetuned ? transcript.fineTunedText : transcript.text
+
+  const displayText = (hasFinetuned ? transcript.fineTunedText : transcript.text) || ""
   const isLongText = displayText.length > 300
 
   // Cleanup timeout on unmount
@@ -39,12 +40,12 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   const handleCopy = async (text: string, type: "raw" | "finetuned") => {
     try {
       await navigator.clipboard.writeText(text)
-      
+
       // Clear any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
-      
+
       if (type === "raw") {
         setCopiedRaw(true)
         timeoutRef.current = setTimeout(() => setCopiedRaw(false), 2000)
@@ -58,11 +59,11 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
   }
 
   return (
-    <div 
+    <div
       className={cn(
-        "group relative p-6 rounded-2xl hover:bg-secondary/50 transition-all duration-300 border",
-        selectionMode && isSelected 
-          ? "border-primary bg-primary/5" 
+        "group relative p-6 rounded-3xl hover:bg-secondary/50 transition-all duration-300 border",
+        selectionMode && isSelected
+          ? "border-primary bg-primary/5"
           : "bg-secondary/30 border-transparent hover:border-border/50"
       )}
       onClick={selectionMode ? onToggleSelect : undefined}
@@ -77,26 +78,63 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
           )}
         </div>
       )}
-      
+
       <div className={cn("space-y-4", selectionMode && "ml-8")}>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{date}</p>
-          {hasFinetuned && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-              Refined
-            </span>
-          )}
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {date}
+            {transcript.duration ? ` · ${Math.floor(transcript.duration / 60).toString().padStart(2, '0')}:${(transcript.duration % 60).toString().padStart(2, '0')}` : ''}
+          </p>
+          <div className="flex items-center gap-2">
+            {transcript.status === 'failed' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                Failed
+              </span>
+            )}
+            {hasFinetuned && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Refined
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Audio Player */}
+        {(transcript as any).recordingId && getAccessToken() && (
+          <div className="mt-2 text-primary">
+            <audio
+              controls
+              className="w-full h-8"
+              preload="metadata"
+            >
+              <source
+                src={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+                type="audio/webm"
+              />
+              Your browser does not support the audio element.
+            </audio>
+            <div className="flex justify-end mt-1">
+              <a
+                href={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+                download={`recording-${transcript.id}.webm`}
+                className="text-[9px] text-muted-foreground hover:text-primary flex items-center gap-1"
+              >
+                <DownloadIcon className="w-2.5 h-2.5" /> Download
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className={cn(
-            "text-base leading-relaxed font-light text-foreground/90 whitespace-pre-wrap",
+            "text-base leading-relaxed font-light whitespace-pre-wrap",
+            transcript.status === 'failed' ? "text-destructive italic" : "text-foreground/90",
             !isExpanded && "line-clamp-3",
             isExpanded && "max-h-[60vh] overflow-y-auto"
           )}>
-            {displayText}
+            {transcript.status === 'failed' ? "Transcription processing failed. Audio is preserved above." : displayText}
           </div>
-          
+
           {isLongText && (
             <button
               onClick={(e) => {
@@ -108,7 +146,7 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
               {isExpanded ? "Show less" : "Read more"}
             </button>
           )}
-          
+
           {/* Tags Display */}
           {transcript.tags && transcript.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -128,7 +166,7 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
           <div className="text-xs text-muted-foreground font-mono">
             {transcript.model}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               onClick={(e) => {
@@ -145,28 +183,28 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
                 <Copy className="w-3 h-3" />
               )}
             </Button>
-            
+
             {!hasFinetuned && (
-              <Button 
+              <Button
                 onClick={(e) => {
                   e.stopPropagation()
                   router.push(`/fine-tune?transcriptId=${transcript.id}`)
-                }} 
-                variant="ghost" 
+                }}
+                variant="ghost"
                 size="sm"
                 className="h-8 px-3 text-xs hover:bg-background/50"
               >
                 Refine
               </Button>
             )}
-            
-            <Button 
+
+            <Button
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete?.(transcript.id)
-              }} 
-              variant="ghost" 
-              size="sm" 
+              }}
+              variant="ghost"
+              size="sm"
               className="h-8 px-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             >
               Delete

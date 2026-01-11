@@ -59,9 +59,11 @@ import {
     Minus,
     Image as ImageIcon,
     Youtube as YoutubeIcon,
+    GitBranch,
     type LucideIcon
 } from "lucide-react"
 import { Markdown } from "tiptap-markdown"
+import MermaidExtension from "./mermaid-extension"
 
 interface NovelEditorProps {
     content: string
@@ -214,6 +216,15 @@ export default function NovelEditor({
                     editor.chain().focus().deleteRange(range).setYoutubeVideo({ src: url }).run()
                 }
             }
+        },
+        {
+            title: "Mermaid Diagram",
+            description: "Create a flowchart or diagram",
+            searchTerms: ["diagram", "flowchart", "mermaid", "chart", "graph"],
+            icon: <GitBranch className="w-5 h-5" />,
+            command: ({ editor, range }) => {
+                editor.chain().focus().deleteRange(range).insertContent({ type: "mermaid", attrs: { content: "" } }).run()
+            }
         }
     ])
 
@@ -223,7 +234,7 @@ export default function NovelEditor({
             heading: { levels: [1, 2, 3] },
             bulletList: { keepMarks: true, keepAttributes: false },
             orderedList: { keepMarks: true, keepAttributes: false },
-            codeBlock: { HTMLAttributes: { class: "bg-muted rounded-lg p-4 font-mono text-sm" } },
+            codeBlock: { HTMLAttributes: { class: "bg-muted rounded-2xl p-4 font-mono text-sm" } },
             blockquote: { HTMLAttributes: { class: "border-l-4 border-primary pl-4 italic" } }
         }),
         Placeholder.configure({
@@ -246,7 +257,7 @@ export default function NovelEditor({
         }),
         TiptapImage.configure({
             HTMLAttributes: {
-                class: "rounded-lg border border-border"
+                class: "rounded-3xl border border-border"
             },
             allowBase64: true
         }),
@@ -290,12 +301,13 @@ export default function NovelEditor({
             controls: false,
             nocookie: true,
             HTMLAttributes: {
-                class: "w-full rounded-lg border border-border overflow-hidden m-0",
+                class: "w-full rounded-3xl border border-border overflow-hidden m-0",
             },
         }),
         TextAlign.configure({
             types: ['heading', 'paragraph'],
         }),
+        MermaidExtension,
     ]
 
     useEffect(() => {
@@ -363,7 +375,7 @@ export default function NovelEditor({
     }
 
     if (!mounted || !initialContent) {
-        return <div className="h-[300px] animate-pulse bg-secondary/20 rounded-lg" />
+        return <div className="h-[300px] animate-pulse bg-secondary/20 rounded-3xl" />
     }
 
     return (
@@ -443,14 +455,14 @@ export default function NovelEditor({
                         "[&_.ProseMirror_blockquote_p]:mb-0", // No extra margin in blockquote paragraphs
 
                         // Code blocks - distinct separation
-                        "[&_.ProseMirror_pre]:bg-muted [&_.ProseMirror_pre]:rounded-lg",
+                        "[&_.ProseMirror_pre]:bg-muted [&_.ProseMirror_pre]:rounded-2xl",
                         "[&_.ProseMirror_pre]:p-4 [&_.ProseMirror_pre]:my-5",
                         "[&_.ProseMirror_pre]:overflow-x-auto [&_.ProseMirror_pre]:leading-relaxed",
                         "[&_.ProseMirror_pre_code]:bg-transparent [&_.ProseMirror_pre_code]:p-0",
 
                         // Inline code
                         "[&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1.5",
-                        "[&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded",
+                        "[&_.ProseMirror_code]:py-0.5 [&_.ProseMirror_code]:rounded-md",
                         "[&_.ProseMirror_code]:text-sm [&_.ProseMirror_code]:font-mono",
 
                         // Horizontal rule
@@ -461,7 +473,7 @@ export default function NovelEditor({
                         "[&_.ProseMirror_a]:underline-offset-4 [&_.ProseMirror_a]:decoration-primary/50",
 
                         // Images
-                        "[&_.ProseMirror_img]:rounded-xl [&_.ProseMirror_img]:border [&_.ProseMirror_img]:border-border [&_.ProseMirror_img]:my-6",
+                        "[&_.ProseMirror_img]:rounded-3xl [&_.ProseMirror_img]:border [&_.ProseMirror_img]:border-border [&_.ProseMirror_img]:my-6",
 
                         // Placeholder styling
                         "[&_.ProseMirror_.is-empty::before]:text-muted-foreground",
@@ -474,7 +486,7 @@ export default function NovelEditor({
                     )}
                 >
                     {/* Slash Command Menu */}
-                    <EditorCommand className="z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-xl transition-all">
+                    <EditorCommand className="z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-3xl border border-border bg-popover p-2 shadow-xl transition-all">
                         <EditorCommandEmpty className="px-2 py-3 text-center text-sm text-muted-foreground">
                             No commands found
                         </EditorCommandEmpty>
@@ -484,9 +496,9 @@ export default function NovelEditor({
                                     key={item.title}
                                     value={item.title}
                                     onCommand={(val) => item.command?.(val)}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-accent aria-selected:bg-accent transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer hover:bg-accent aria-selected:bg-accent transition-colors"
                                 >
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-muted-foreground">
                                         {item.icon}
                                     </div>
                                     <div className="flex-1">
@@ -504,42 +516,42 @@ export default function NovelEditor({
                             placement: "top",
                             animation: "shift-away"
                         }}
-                        className="flex items-center gap-0.5 rounded-xl border border-border bg-popover/95 backdrop-blur-sm px-1.5 py-1 shadow-xl"
+                        className="flex items-center gap-0.5 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-1.5 py-1 shadow-xl"
                     >
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleBold().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <Bold className="w-4 h-4" />
                         </EditorBubbleItem>
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <Italic className="w-4 h-4" />
                         </EditorBubbleItem>
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <Underline className="w-4 h-4" />
                         </EditorBubbleItem>
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleStrike().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <Strikethrough className="w-4 h-4" />
                         </EditorBubbleItem>
                         <div className="w-px h-5 bg-border mx-1" />
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleCode().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <Code className="w-4 h-4" />
                         </EditorBubbleItem>
                         <EditorBubbleItem
                             onSelect={(editor) => editor.chain().focus().toggleHighlight().run()}
-                            className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                            className="p-1.5 rounded-full hover:bg-accent transition-colors"
                         >
                             <span className="w-4 h-4 bg-yellow-300 dark:bg-yellow-500 rounded text-[10px] font-bold flex items-center justify-center text-black">H</span>
                         </EditorBubbleItem>

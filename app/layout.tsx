@@ -4,7 +4,6 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { MinimalNav, MobileNav } from "@/components/minimal-nav"
 
 import { Geist, Geist_Mono, Playfair_Display, Lora } from 'next/font/google'
 
@@ -33,13 +32,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${lora.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <MinimalNav />
-          <div className="md:pl-16 min-h-screen transition-all duration-300">
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {children}
-            </div>
-          </div>
-          <MobileNav />
+          {children}
           <Analytics />
         </ThemeProvider>
       </body>

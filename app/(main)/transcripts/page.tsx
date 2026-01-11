@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TranscriptCard } from "@/components/transcript-list/transcript-card"
-import { getSettings, getTranscripts, deleteTranscript, exportAllData } from "@/lib/storage"
+import { getSettings, getTranscripts, deleteTranscript, exportAllData, getAccessToken } from "@/lib/storage"
 import type { Transcript } from "@/lib/types"
 import { Trash2, Download, CheckSquare, Square } from "lucide-react"
 
@@ -19,13 +19,12 @@ export default function TranscriptsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    const settings = getSettings()
-    if (!settings.onboardingComplete) {
-      router.push("/onboarding")
-    } else {
-      setIsOnboarded(true)
-      setTranscripts(getTranscripts().sort((a, b) => b.createdAt - a.createdAt))
-    }
+    // No need to fetch settings just for auth check anymore
+    // AuthGuard guarantees onboardingComplete is true
+    setIsOnboarded(true)
+    getTranscripts().then(data => {
+      setTranscripts(data.sort((a, b) => b.createdAt - a.createdAt))
+    })
   }, [router])
 
   // Get all unique tags from transcripts
@@ -101,7 +100,7 @@ export default function TranscriptsPage() {
             <h1 className="text-3xl font-light tracking-tight">History</h1>
             <p className="text-muted-foreground">Your past transcriptions</p>
           </div>
-          
+
           {filteredTranscripts.length > 0 && (
             <Button
               onClick={() => setSelectionMode(!selectionMode)}
@@ -144,18 +143,17 @@ export default function TranscriptsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-secondary/50 border-transparent focus:bg-background transition-all"
           />
-          
+
           {/* Tag Filter */}
           {allTags.length > 0 && (
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs text-muted-foreground font-medium">Filter by tag:</span>
               <button
                 onClick={() => setSelectedTag(null)}
-                className={`px-3 py-1 text-xs rounded-full transition-all ${
-                  !selectedTag
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
-                }`}
+                className={`px-3 py-1 text-xs rounded-full transition-all ${!selectedTag
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
+                  }`}
               >
                 All
               </button>
@@ -163,11 +161,10 @@ export default function TranscriptsPage() {
                 <button
                   key={tag}
                   onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
-                  className={`px-3 py-1 text-xs rounded-full transition-all ${
-                    selectedTag === tag
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
-                  }`}
+                  className={`px-3 py-1 text-xs rounded-full transition-all ${selectedTag === tag
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
+                    }`}
                 >
                   {tag}
                 </button>
@@ -179,9 +176,9 @@ export default function TranscriptsPage() {
         <div className="space-y-4">
           {filteredTranscripts.length > 0 ? (
             filteredTranscripts.map((transcript) => (
-              <TranscriptCard 
-                key={transcript.id} 
-                transcript={transcript} 
+              <TranscriptCard
+                key={transcript.id}
+                transcript={transcript}
                 onDelete={handleDelete}
                 selectionMode={selectionMode}
                 isSelected={selectedIds.has(transcript.id)}

@@ -33,7 +33,9 @@ export interface Transcript {
   audio?: Blob
   tags?: string[]
   isDraft?: boolean
-}
+  status?: 'completed' | 'failed'
+  duration?: number // Duration in seconds
+} // New status field
 
 export interface FinetuneRequest {
   id: string
@@ -61,4 +63,12 @@ export interface EncryptedData {
   ciphertext: string
   nonce: string
   algorithm: "nacl"
+}
+
+export interface Session {
+  id: string
+  deviceName: string
+  createdAt: number
+  expiresAt: number
+  isCurrent: boolean
 }

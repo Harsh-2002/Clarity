@@ -12,13 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code } from "lucide-react"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code, ListTodo, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
+import TodoList from "@/components/todo/todo-list"
 
 const NovelEditor = dynamic(() => import("@/components/editor/novel-editor"), {
   ssr: false,
-  loading: () => <div className="h-[300px] animate-pulse bg-secondary/20 rounded-lg" />
+  loading: () => <div className="h-[300px] animate-pulse bg-secondary/20 rounded-3xl" />
 })
 import { formatRelativeTime } from "@/lib/format-time"
 
@@ -44,6 +45,7 @@ export default function NotesPage() {
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle")
+  const [showTodos, setShowTodos] = useState(false)
 
   // Removed unused fileInputRef
 
@@ -729,6 +731,16 @@ export default function NotesPage() {
                 <Upload className="w-4 h-4" />
               </Button>
             </div>
+
+            <Button
+              variant={showTodos ? "default" : "outline"}
+              size="icon"
+              className="h-11 w-11"
+              title="Toggle Tasks Panel"
+              onClick={() => setShowTodos(!showTodos)}
+            >
+              <ListTodo className="w-4 h-4" />
+            </Button>
           </div>
 
           {/* Search Bar */}
@@ -743,6 +755,13 @@ export default function NotesPage() {
               className="pl-9 h-10"
             />
           </div>
+
+          {/* TODO Panel - Collapsible */}
+          {showTodos && (
+            <div className="mt-3 p-3 bg-background rounded-2xl border border-border max-h-[250px] overflow-hidden">
+              <TodoList />
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -775,7 +794,7 @@ export default function NotesPage() {
                   }
                 }}
                 className={cn(
-                  "group p-3 md:p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-secondary/30 hover:bg-secondary/60",
+                  "group p-3 md:p-4 rounded-3xl cursor-pointer transition-all duration-200 bg-secondary/30 hover:bg-secondary/60",
                   selectedNote?.id === note.id
                     ? "bg-primary/10 border border-primary/20"
                     : "bg-secondary/20 border border-transparent"
@@ -799,7 +818,7 @@ export default function NotesPage() {
                       e.stopPropagation()
                       confirmDelete(note)
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-md transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full transition-all"
                     title="Delete note"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

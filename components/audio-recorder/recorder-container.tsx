@@ -11,7 +11,7 @@ import { PROVIDER_CONFIGS } from "@/lib/providers"
 import { getSettings } from "@/lib/storage"
 
 interface RecorderContainerProps {
-  onAudioReady: (blob: Blob, fileName: string, duration: number) => void
+  onAudioReady: (blob: Blob, fileName: string, duration: number, fileId?: string) => void
 }
 
 export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
@@ -45,10 +45,10 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     }
   }, [])
 
-  const handleRecordingComplete = useCallback((blob: Blob, duration: number) => {
+  const handleRecordingComplete = useCallback((blob: Blob, duration: number, fileId?: string) => {
     const timestamp = new Date().toLocaleTimeString().replace(/:/g, "-")
     const fileName = `recording-${timestamp}.webm`
-    onAudioReady(blob, fileName, duration)
+    onAudioReady(blob, fileName, duration, fileId)
   }, [onAudioReady])
 
   const handleStartRecording = useCallback(async () => {
@@ -72,7 +72,19 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     if (!recorder) return
 
     const audioBlob = await recorder.stopRecording()
-    handleRecordingComplete(audioBlob, recordingState.duration)
+
+    // Upload recording to storage
+    let fileId: string | undefined
+    try {
+      const { id } = await import('@/lib/storage').then(m => m.uploadAudio(audioBlob))
+      fileId = id
+    } catch (e) {
+      console.error("Failed to save recording to storage", e)
+      // We continue even if upload fails, so user at least gets transcription
+    }
+
+    handleRecordingComplete(audioBlob, recordingState.duration, fileId)
+
     setRecordingState({
       isRecording: false,
       isPaused: false,
@@ -88,8 +100,8 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
     const lockOrientation = async () => {
       try {
-        if (screen.orientation && screen.orientation.lock && window.innerWidth < 768) {
-          await screen.orientation.lock("landscape").catch(() => {
+        if (screen.orientation && (screen.orientation as any).lock && window.innerWidth < 768) {
+          await (screen.orientation as any).lock("landscape").catch(() => {
             // Orientation lock might fail, that's OK
             console.log("[Orientation] Lock not supported or permission denied")
           })
@@ -101,8 +113,8 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
     const unlockOrientation = () => {
       try {
-        if (screen.orientation && screen.orientation.unlock) {
-          screen.orientation.unlock()
+        if (screen.orientation && (screen.orientation as any).unlock) {
+          (screen.orientation as any).unlock()
         }
       } catch (err) {
         // Silently fail
@@ -216,7 +228,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
 
     if (!file) return
 
-    const settings = getSettings()
+    const settings = await import('@/lib/storage').then(m => m.getSettings())
     const provider = settings.selectedProvider
     const providerConfig = provider ? PROVIDER_CONFIGS[provider] : null
 
@@ -250,7 +262,13 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       return
     }
 
-    onAudioReady(file, file.name, 0)
+    try {
+      const { id: fileId } = await import('@/lib/storage').then(m => m.uploadAudio(file))
+      onAudioReady(file, file.name, 0, fileId)
+    } catch (err) {
+      setError("Failed to upload file")
+      console.error(err)
+    }
 
     // Reset input
     if (fileInputRef.current) {
@@ -279,7 +297,7 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
     const file = e.dataTransfer.files?.[0]
     if (!file) return
 
-    const settings = getSettings()
+    const settings = await import('@/lib/storage').then(m => m.getSettings())
     const provider = settings.selectedProvider
     const providerConfig = provider ? PROVIDER_CONFIGS[provider] : null
 
@@ -304,7 +322,13 @@ export function RecorderContainer({ onAudioReady }: RecorderContainerProps) {
       return
     }
 
-    onAudioReady(file, file.name, 0)
+    try {
+      const { id: fileId } = await import('@/lib/storage').then(m => m.uploadAudio(file))
+      onAudioReady(file, file.name, 0, fileId)
+    } catch (err) {
+      setError("Failed to upload file")
+      console.error(err)
+    }
   }
 
   return (

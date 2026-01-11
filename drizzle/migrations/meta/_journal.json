@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1768138734180,
+      "tag": "0000_kind_thunderbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768147537329,
+      "tag": "0001_lumpy_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768148171538,
+      "tag": "0002_breezy_wind_dancer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1768151004594,
+      "tag": "0003_salty_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1768160443714,
+      "tag": "0004_overrated_cargill",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1768161143372,
+      "tag": "0005_peaceful_skullbuster",
+      "breakpoints": true
+    }
+  ]
+}

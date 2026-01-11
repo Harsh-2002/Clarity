@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react"
 import { createContext, useContext, useState } from "react"
-import type { AppSettings } from "@/lib/types"
-import { saveSettings } from "@/lib/storage"
+import type { AppSettings, ProviderConfig } from "@/lib/types"
+import { saveSettings, saveProvider, setAccessToken } from "@/lib/storage"
 
 interface OnboardingContextType {
   step: number
@@ -25,6 +25,7 @@ interface OnboardingContextType {
   setAvailableTranscriptionModels: (models: string[]) => void
   availableFinetuneModels: string[]
   setAvailableFinetuneModels: (models: string[]) => void
+  login: (password: string) => Promise<boolean>
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
@@ -41,7 +42,54 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [availableTranscriptionModels, setAvailableTranscriptionModels] = useState<string[]>([])
   const [availableFinetuneModels, setAvailableFinetuneModels] = useState<string[]>([])
 
-  const completeOnboarding = () => {
+  const login = async (password: string): Promise<boolean> => {
+    setIsValidating(true)
+    setValidationError(null)
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Invalid credentials')
+      }
+
+      const data = await res.json()
+      setAccessToken(data.accessToken)
+
+      return true
+    } catch (err) {
+      setValidationError(err instanceof Error ? err.message : 'Login failed')
+      return false
+    } finally {
+      setIsValidating(false)
+    }
+  }
+
+  const completeOnboarding = async () => {
+    if (selectedProvider) {
+      const providerConfig: ProviderConfig = {
+        id: selectedProvider,
+        name: selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1),
+        apiKey: apiKey,
+        models: {
+          transcription: transcriptionModel,
+          fineTuning: finetuneModel
+        },
+        limits: {
+          maxFileSize: 25 * 1024 * 1024,
+          supportedFormats: ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+        }
+      }
+      try {
+        await saveProvider(providerConfig)
+      } catch (e) {
+        console.error("Failed to save provider config", e)
+      }
+    }
+
     const settings: AppSettings = {
       selectedProvider,
       selectedTranscriptionModel: transcriptionModel,
@@ -52,7 +100,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       theme: "system",
       onboardingComplete: true,
     }
-    saveSettings(settings)
+    await saveSettings(settings)
   }
 
   return (
@@ -77,6 +125,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setAvailableTranscriptionModels,
         availableFinetuneModels,
         setAvailableFinetuneModels,
+        login,
       }}
     >
       {children}
