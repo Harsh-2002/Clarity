@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight, Clock, CheckCircle2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, CheckCircle2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Task {
     id: string
@@ -24,13 +26,52 @@ export default function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
     const [mounted, setMounted] = useState(false)
     const [viewMode, setViewMode] = useState<ViewMode>("month")
+    const [newTaskText, setNewTaskText] = useState("")
+    const [isCreating, setIsCreating] = useState(false)
 
-    useEffect(() => {
-        setMounted(true)
+    const fetchTasks = () => {
         fetch("/api/tasks")
             .then(r => r.ok ? r.json() : [])
             .then(setTasks)
+    }
+
+    useEffect(() => {
+        setMounted(true)
+        fetchTasks()
     }, [])
+
+    const createTask = async () => {
+        if (!newTaskText.trim() || !selectedDate) return
+
+        setIsCreating(true)
+        const task = {
+            id: crypto.randomUUID(),
+            text: newTaskText.trim(),
+            priority: "medium",
+            completed: false,
+            dueDate: selectedDate.toISOString(),
+            createdAt: new Date().toISOString()
+        }
+
+        try {
+            const res = await fetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(task)
+            })
+            if (res.ok) {
+                setNewTaskText("")
+                fetchTasks()
+                toast.success("Task created!")
+            } else {
+                toast.error("Failed to create task")
+            }
+        } catch (error) {
+            toast.error("Failed to create task")
+        } finally {
+            setIsCreating(false)
+        }
+    }
 
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
@@ -292,34 +333,57 @@ export default function CalendarPage() {
                             </h2>
 
                             {selectedDate ? (
-                                selectedDateTasks.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {selectedDateTasks.map(task => (
-                                            <Card key={task.id} className="rounded-xl border-border/50">
-                                                <CardContent className="p-3 flex items-center gap-3">
-                                                    {task.completed ? (
-                                                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                    ) : (
-                                                        <Clock className="w-4 h-4 text-yellow-500" />
-                                                    )}
-                                                    <span className={cn(
-                                                        "text-sm",
-                                                        task.completed && "line-through text-muted-foreground"
-                                                    )}>
-                                                        {task.text}
-                                                    </span>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                <div className="space-y-4">
+                                    {/* Add Task Form */}
+                                    <div className="p-1 bg-secondary/30 rounded-full flex gap-2">
+                                        <Input
+                                            value={newTaskText}
+                                            onChange={(e) => setNewTaskText(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && createTask()}
+                                            placeholder="Add a task for this day..."
+                                            className="flex-1 border-0 bg-transparent focus-visible:ring-0"
+                                            disabled={isCreating}
+                                        />
+                                        <Button
+                                            onClick={createTask}
+                                            disabled={!newTaskText.trim() || isCreating}
+                                            size="icon"
+                                            className="rounded-full shrink-0"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </Button>
                                     </div>
-                                ) : (
-                                    <div className="p-8 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                        No tasks for this day
-                                    </div>
-                                )
+
+                                    {/* Tasks List */}
+                                    {selectedDateTasks.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {selectedDateTasks.map(task => (
+                                                <Card key={task.id} className="rounded-xl border-border/50">
+                                                    <CardContent className="p-3 flex items-center gap-3">
+                                                        {task.completed ? (
+                                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                        ) : (
+                                                            <Clock className="w-4 h-4 text-yellow-500" />
+                                                        )}
+                                                        <span className={cn(
+                                                            "text-sm",
+                                                            task.completed && "line-through text-muted-foreground"
+                                                        )}>
+                                                            {task.text}
+                                                        </span>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl text-sm">
+                                            No tasks for this day yet
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="p-8 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                    Click on a date to view tasks
+                                    Click on a date to view and add tasks
                                 </div>
                             )}
 

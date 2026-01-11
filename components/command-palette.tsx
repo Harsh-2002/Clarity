@@ -41,18 +41,22 @@ export function CommandPalette() {
     const router = useRouter()
     const { theme, setTheme } = useTheme()
 
-    // Toggle with Cmd+K / Ctrl+K
+    // Toggle with Cmd+K / Ctrl+K and handle ESC
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
             if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
                 setOpen((open) => !open)
             }
+            if (e.key === "Escape" && open) {
+                e.preventDefault()
+                setOpen(false)
+            }
         }
 
         document.addEventListener("keydown", down)
         return () => document.removeEventListener("keydown", down)
-    }, [])
+    }, [open])
 
     // Fetch data when opened
     useEffect(() => {

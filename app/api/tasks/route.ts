@@ -15,13 +15,14 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { id, text, priority, createdAt, completed } = body;
+        const { id, text, priority, createdAt, completed, dueDate } = body;
 
         await db.insert(tasks).values({
             id,
             text,
             priority,
             completed: completed || false,
+            dueDate: dueDate ? new Date(dueDate) : null,
             createdAt: new Date(createdAt),
             updatedAt: new Date(),
         });

@@ -3,15 +3,23 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from "@tiptap/react"
 import { useEffect, useRef, useState } from "react"
-import mermaid from "mermaid"
 
-// Initialize mermaid
-mermaid.initialize({
-    startOnLoad: false,
-    theme: "neutral",
-    securityLevel: "loose",
-    fontFamily: "inherit"
-})
+// Mermaid is imported dynamically to avoid SSR issues
+let mermaidInstance: typeof import("mermaid").default | null = null
+
+async function getMermaid() {
+    if (!mermaidInstance) {
+        const mermaid = (await import("mermaid")).default
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: "neutral",
+            securityLevel: "loose",
+            fontFamily: "inherit"
+        })
+        mermaidInstance = mermaid
+    }
+    return mermaidInstance
+}
 
 interface MermaidNodeProps {
     node: { attrs: { content: string } }
@@ -29,6 +37,7 @@ function MermaidNodeView({ node, updateAttributes }: MermaidNodeProps) {
 
         const renderDiagram = async () => {
             try {
+                const mermaid = await getMermaid()
                 const id = `mermaid-${Math.random().toString(36).slice(2)}`
                 const { svg } = await mermaid.render(id, node.attrs.content)
                 setSvg(svg)

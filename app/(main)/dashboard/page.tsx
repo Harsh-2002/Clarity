@@ -11,14 +11,33 @@ import {
     Plus,
     ArrowRight,
     ListTodo,
-    Columns3
+    Columns3,
+    Calendar,
+    FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
+interface Task {
+    id: string
+    text: string
+    completed: boolean
+    priority: string
+    dueDate: string | null
+    createdAt: string
+}
+
+interface Transcript {
+    id: string
+    name: string
+    createdAt: string
+}
+
 export default function DashboardPage() {
-    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0 })
+    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0 })
     const [recentNotes, setRecentNotes] = useState<any[]>([])
+    const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
+    const [recentTranscripts, setRecentTranscripts] = useState<Transcript[]>([])
     const [currentTime, setCurrentTime] = useState(new Date())
     const [mounted, setMounted] = useState(false)
 
@@ -35,21 +54,39 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [notesRes, tasksRes] = await Promise.all([
+                const [notesRes, tasksRes, transcriptsRes] = await Promise.all([
                     fetch("/api/v1/notes"),
-                    fetch("/api/tasks")
+                    fetch("/api/tasks"),
+                    fetch("/api/v1/transcripts")
                 ])
 
-                if (notesRes.ok && tasksRes.ok) {
+                if (notesRes.ok) {
                     const notes = await notesRes.json()
-                    const tasks = await tasksRes.json()
-
-                    setStats({
-                        notes: notes.length,
-                        pendingTasks: tasks.filter((t: any) => !t.completed).length,
-                        completedTasks: tasks.filter((t: any) => t.completed).length
-                    })
                     setRecentNotes(notes.slice(0, 3))
+                    setStats(prev => ({ ...prev, notes: notes.length }))
+                }
+
+                if (tasksRes.ok) {
+                    const tasks: Task[] = await tasksRes.json()
+                    const pending = tasks.filter(t => !t.completed)
+                    const completed = tasks.filter(t => t.completed)
+
+                    // Get upcoming tasks (with due date, sorted by date)
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const upcoming = pending
+                        .filter(t => t.dueDate && new Date(t.dueDate) >= today)
+                        .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+                        .slice(0, 5)
+
+                    setUpcomingTasks(upcoming)
+                    setStats(prev => ({ ...prev, pendingTasks: pending.length, completedTasks: completed.length }))
+                }
+
+                if (transcriptsRes.ok) {
+                    const transcripts: Transcript[] = await transcriptsRes.json()
+                    setRecentTranscripts(transcripts.slice(0, 3))
+                    setStats(prev => ({ ...prev, transcripts: transcripts.length }))
                 }
             } catch (error) {
                 console.error("Failed to load dashboard data", error)
@@ -110,7 +147,7 @@ export default function DashboardPage() {
                             {getGreeting()}
                         </h1>
                         <p className="text-muted-foreground text-lg">
-                            Here's what's happening today.
+                            Here&apos;s what&apos;s happening today.
                         </p>
                     </div>
 
@@ -163,42 +200,113 @@ export default function DashboardPage() {
                 </motion.div>
 
                 {/* Main Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Recent Notes */}
-                    <motion.div {...slideUp} className="md:col-span-2 space-y-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            Recent Notes
-                        </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column - Notes & Tasks */}
+                    <motion.div {...slideUp} className="lg:col-span-2 space-y-6">
+                        {/* Recent Notes */}
                         <div className="space-y-3">
-                            {recentNotes.length > 0 ? (
-                                recentNotes.map((note) => (
-                                    <Link key={note.id} href={`/notes?id=${note.id}`}>
-                                        <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground/50 group-hover:text-primary transition-colors">
-                                                    <BookMarked className="w-4 h-4" />
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <BookMarked className="w-4 h-4 text-blue-500" />
+                                Recent Notes
+                            </h2>
+                            <div className="space-y-2">
+                                {recentNotes.length > 0 ? (
+                                    recentNotes.map((note) => (
+                                        <Link key={note.id} href={`/notes?id=${note.id}`}>
+                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground/50 group-hover:text-primary transition-colors">
+                                                        <BookMarked className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{note.title || "Untitled"}</h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {new Date(note.updatedAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-medium group-hover:text-primary transition-colors">{note.title || "Untitled"}</h3>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {new Date(note.updatedAt).toLocaleDateString()}
-                                                    </p>
-                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                                             </div>
-                                            <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                        </div>
-                                    </Link>
-                                ))
-                            ) : (
-                                <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                    No notes yet
-                                </div>
-                            )}
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                                        No notes yet
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Upcoming Tasks */}
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-yellow-500" />
+                                Upcoming Tasks
+                            </h2>
+                            <div className="space-y-2">
+                                {upcomingTasks.length > 0 ? (
+                                    upcomingTasks.map((task) => (
+                                        <Link key={task.id} href="/tasks">
+                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                                                        <ListTodo className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{task.text}</h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Due: {new Date(task.dueDate!).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                            </div>
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                                        No upcoming tasks with due dates
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Recent Transcriptions */}
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <Mic className="w-4 h-4 text-purple-500" />
+                                Recent Transcriptions
+                            </h2>
+                            <div className="space-y-2">
+                                {recentTranscripts.length > 0 ? (
+                                    recentTranscripts.map((transcript) => (
+                                        <Link key={transcript.id} href="/transcripts">
+                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                                        <FileText className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{transcript.name || "Recording"}</h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {new Date(transcript.createdAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                            </div>
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                                        No transcriptions yet
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </motion.div>
 
-                    {/* Quick Actions Sidebar */}
+                    {/* Right Column - Quick Actions */}
                     <motion.div {...slideUp} className="space-y-6">
                         <h2 className="text-xl font-semibold">Quick Actions</h2>
                         <div className="grid grid-cols-1 gap-3">
@@ -225,12 +333,12 @@ export default function DashboardPage() {
                                 </Link>
                             </Button>
                             <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
-                                <Link href="/kanban">
-                                    <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 mr-4">
-                                        <Columns3 className="w-4 h-4" />
+                                <Link href="/calendar">
+                                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mr-4">
+                                        <Calendar className="w-4 h-4" />
                                     </div>
                                     <div className="text-left flex-1">
-                                        <div className="font-medium">Kanban Board</div>
+                                        <div className="font-medium">View Calendar</div>
                                     </div>
                                     <ArrowRight className="w-4 h-4 text-muted-foreground/30 ml-2" />
                                 </Link>
@@ -253,3 +361,4 @@ export default function DashboardPage() {
         </div>
     )
 }
+

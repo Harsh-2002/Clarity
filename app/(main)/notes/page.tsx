@@ -49,29 +49,23 @@ export default function NotesPage() {
 
   // Removed unused fileInputRef
 
-
-
-
-  const loadNotes = () => {
+  const loadNotes = async () => {
     try {
-      const stored = localStorage.getItem("clarity-notes")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setNotes(parsed)
-        if (parsed.length > 0) {
-          setSelectedNote(parsed[0])
-          try {
-            setContent(parsed[0].content)
-          } catch (e) {
-            // Migration: wrap plain text in a basic Tiptap doc structure
-            setContent(JSON.stringify({
-              type: "doc",
-              content: [{
-                type: "paragraph",
-                content: [{ type: "text", text: parsed[0].content.replace(/<[^>]*>/g, '') }]
-              }]
-            }))
-          }
+      const res = await fetch("/api/v1/notes")
+      if (res.ok) {
+        const data = await res.json()
+        // Transform API response to match our Note interface
+        const transformed = data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          createdAt: new Date(n.createdAt).getTime(),
+          updatedAt: new Date(n.updatedAt).getTime()
+        }))
+        setNotes(transformed)
+        if (transformed.length > 0) {
+          setSelectedNote(transformed[0])
+          setContent(transformed[0].content)
         }
       }
     } catch (err) {
@@ -79,38 +73,68 @@ export default function NotesPage() {
     }
   }
 
-  const saveNotes = useCallback((updatedNotes: Note[]) => {
+  const saveNote = useCallback(async (note: Note) => {
     try {
       setSaveStatus("saving")
-      localStorage.setItem("clarity-notes", JSON.stringify(updatedNotes))
-      setNotes(updatedNotes)
-      setTimeout(() => {
+      const res = await fetch(`/api/v1/notes/${note.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: note.title,
+          content: note.content
+        })
+      })
+      if (res.ok) {
+        setNotes(prev => prev.map(n => n.id === note.id ? note : n))
         setSaveStatus("saved")
         setTimeout(() => setSaveStatus("idle"), 2000)
-      }, 300)
+      }
     } catch (err) {
-      console.error("Failed to save notes:", err)
+      console.error("Failed to save note:", err)
       setSaveStatus("idle")
     }
   }, [])
 
-  const createNewNote = useCallback(() => {
+  // Legacy saveNotes for bulk operations (migrate existing patterns)
+  const saveNotes = useCallback((updatedNotes: Note[]) => {
+    setNotes(updatedNotes)
+    setSaveStatus("saved")
+    setTimeout(() => setSaveStatus("idle"), 2000)
+  }, [])
+
+  const createNewNote = useCallback(async () => {
     const initialContent = JSON.stringify({
       type: "doc",
       content: [{ type: "paragraph" }]
     })
     const newNote: Note = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: "Untitled Note",
       content: initialContent,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    const updatedNotes = [newNote, ...notes]
-    saveNotes(updatedNotes)
+
+    // Optimistic update
+    setNotes(prev => [newNote, ...prev])
     setSelectedNote(newNote)
     setContent(initialContent)
-  }, [notes, saveNotes])
+
+    // Persist to API
+    try {
+      await fetch("/api/v1/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: newNote.id,
+          title: newNote.title,
+          content: newNote.content
+        })
+      })
+    } catch (err) {
+      console.error("Failed to create note:", err)
+    }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -135,9 +159,10 @@ export default function NotesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [createNewNote])
 
-  const deleteNote = (id: string) => {
+  const deleteNote = async (id: string) => {
+    // Optimistic update
     const updatedNotes = notes.filter((n) => n.id !== id)
-    saveNotes(updatedNotes)
+    setNotes(updatedNotes)
     if (selectedNote?.id === id) {
       const next = updatedNotes[0] || null
       setSelectedNote(next)
@@ -149,6 +174,14 @@ export default function NotesPage() {
     }
     setDeleteDialogOpen(false)
     setNoteToDelete(null)
+
+    // Persist to API
+    try {
+      await fetch(`/api/v1/notes/${id}`, { method: "DELETE" })
+    } catch (err) {
+      console.error("Failed to delete note:", err)
+      loadNotes() // Revert on error
+    }
   }
 
   const confirmDelete = (note: Note) => {
