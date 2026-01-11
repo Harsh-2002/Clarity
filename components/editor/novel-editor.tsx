@@ -31,6 +31,15 @@ import {
     type ImageUploadOptions,
     GlobalDragHandle
 } from "novel"
+import { Table } from "@tiptap/extension-table"
+import { TableRow } from "@tiptap/extension-table-row"
+import { TableCell } from "@tiptap/extension-table-cell"
+import { TableHeader } from "@tiptap/extension-table-header"
+import { Subscript } from "@tiptap/extension-subscript"
+import { Superscript } from "@tiptap/extension-superscript"
+import { Typography } from "@tiptap/extension-typography"
+import { Youtube } from "@tiptap/extension-youtube"
+import { TextAlign } from "@tiptap/extension-text-align"
 import { cn } from "@/lib/utils"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { toast } from "sonner"
@@ -49,6 +58,7 @@ import {
     CheckSquare,
     Minus,
     Image as ImageIcon,
+    Youtube as YoutubeIcon,
     type LucideIcon
 } from "lucide-react"
 import { Markdown } from "tiptap-markdown"
@@ -95,7 +105,7 @@ export default function NovelEditor({
     className,
     editable = true
 }: NovelEditorProps) {
-    const [initialContent, setInitialContent] = useState<JSONContent | undefined>(undefined)
+    const [initialContent, setInitialContent] = useState<JSONContent | string | undefined>(undefined)
     const [mounted, setMounted] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -192,6 +202,18 @@ export default function NovelEditor({
                 // Trigger file input click
                 fileInputRef.current?.click()
             }
+        },
+        {
+            title: "Youtube",
+            description: "Embed a Youtube video",
+            searchTerms: ["video", "youtube", "embed"],
+            icon: <YoutubeIcon className="w-5 h-5" />,
+            command: ({ editor, range }) => {
+                const url = prompt("Enter Youtube URL")
+                if (url) {
+                    editor.chain().focus().deleteRange(range).setYoutubeVideo({ src: url }).run()
+                }
+            }
         }
     ])
 
@@ -233,7 +255,6 @@ export default function NovelEditor({
         Color,
         HighlightExtension.configure({ multicolor: true }),
         TaskList,
-        TaskList,
         TaskItem.configure({ nested: true }),
         Markdown.configure({
             html: true,
@@ -243,7 +264,38 @@ export default function NovelEditor({
         GlobalDragHandle.configure({
             dragHandleWidth: 20,
             scrollTreshold: 100,
-        })
+            dragHandleSelector: "#drag-handle-element",
+        }),
+        Table.configure({
+            resizable: true,
+            HTMLAttributes: {
+                class: "border-collapse table-auto w-full my-4",
+            },
+        }),
+        TableRow,
+        TableHeader.configure({
+            HTMLAttributes: {
+                class: "border border-border bg-muted px-4 py-2 text-left font-bold",
+            },
+        }),
+        TableCell.configure({
+            HTMLAttributes: {
+                class: "border border-border px-4 py-2",
+            },
+        }),
+        Subscript,
+        Superscript,
+        Typography,
+        Youtube.configure({
+            controls: false,
+            nocookie: true,
+            HTMLAttributes: {
+                class: "w-full rounded-lg border border-border overflow-hidden m-0",
+            },
+        }),
+        TextAlign.configure({
+            types: ['heading', 'paragraph'],
+        }),
     ]
 
     useEffect(() => {
@@ -252,10 +304,8 @@ export default function NovelEditor({
             try {
                 setInitialContent(JSON.parse(content))
             } catch {
-                setInitialContent({
-                    type: "doc",
-                    content: [{ type: "paragraph" }]
-                })
+                // Parse error - treat as raw markdown/string
+                setInitialContent(content)
             }
         } else {
             setInitialContent({
@@ -318,6 +368,7 @@ export default function NovelEditor({
 
     return (
         <div className={cn("novel-editor-wrapper relative", className)}>
+            <div id="drag-handle-element" className="drag-handle" />
             <input
                 type="file"
                 className="hidden"
@@ -328,6 +379,7 @@ export default function NovelEditor({
 
             <EditorRoot>
                 <EditorContent
+                    immediatelyRender={false}
                     initialContent={initialContent}
                     extensions={extensions}
                     editable={editable}

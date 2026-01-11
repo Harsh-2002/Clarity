@@ -598,17 +598,10 @@ export default function NotesPage() {
         return
       }
     } else if (file.name.endsWith('.md')) {
-      // Convert Markdown to Tiptap JSON
-      const lines = text.split('\n')
-      const content = lines.map(line => ({
-        type: "paragraph",
-        content: line.trim() ? [{ type: "text", text: line }] : []
-      }))
-
       newNote = {
         id: Date.now().toString(),
         title: file.name.replace('.md', ''),
-        content: JSON.stringify({ type: "doc", content }),
+        content: text, // Store raw markdown - editor will parse it
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }

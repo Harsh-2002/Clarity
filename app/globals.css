@@ -396,7 +396,6 @@ select:disabled {
   }
 }
 
-/* ===== Drag Handle Styles ===== */
 .drag-handle {
   position: fixed;
   opacity: 1;
@@ -406,7 +405,8 @@ select:disabled {
   background-color: transparent;
   width: 20px;
   height: 24px;
-  z-index: 50;
+  z-index: 9999 !important;
+  /* Force high z-index */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -425,6 +425,29 @@ select:disabled {
 }
 
 .drag-handle.hide {
-  opacity: 0;
-  pointer-events: none;
+  /* Override extension's hide behavior - handle should remain visible */
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* ===== ProseMirror Gap Cursor (Drop Indicator) ===== */
+.ProseMirror-gapcursor::after {
+  border-top: 2px dashed hsl(var(--primary)) !important;
+  opacity: 0.6;
+}
+
+/* Hide gap cursor when not dragging */
+.ProseMirror:not(.dragging) .ProseMirror-gapcursor::after {
+  display: none;
+}
+
+/* ===== Add left padding to ProseMirror for drag handle space ===== */
+.novel-editor-wrapper .ProseMirror {
+  padding-left: 32px !important;
+}
+
+/* Position drag handle with proper alignment */
+.drag-handle {
+  /* Adjust transform to center vertically with line height */
+  transform: translateY(-2px);
 }
