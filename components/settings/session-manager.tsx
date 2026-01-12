@@ -72,9 +72,18 @@ export function SessionManager() {
                                                 <Badge variant="secondary" className="text-xs">Current Device</Badge>
                                             )}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Last active: {formatDistanceToNow(session.createdAt, { addSuffix: true })}
-                                        </p>
+                                        {session.isCurrent ? (
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-2">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                                Active now
+                                                <span className="text-muted-foreground font-normal">• Signed in {formatDistanceToNow(session.createdAt, { addSuffix: true })}</span>
+                                            </span>
+                                        ) : (
+                                            `Signed in: ${formatDistanceToNow(session.createdAt, { addSuffix: true })}`
+                                        )}
                                     </div>
                                 </div>
                                 {!session.isCurrent && (

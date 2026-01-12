@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { RefreshCw, Database } from "lucide-react"
+import { RefreshCw, Database, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getSettings, exportAllData, getProvider, saveSettings } from "@/lib/storage"
 import { fetchAvailableModels } from "@/lib/providers"
@@ -53,6 +53,10 @@ export default function SettingsPage() {
       if (appSettings.selectedProvider) {
         const prov = await getProvider(appSettings.selectedProvider)
         setProvider(prov)
+      }
+      if (appSettings.accentColor) {
+        document.documentElement.style.setProperty("--primary", appSettings.accentColor)
+        document.documentElement.style.setProperty("--ring", appSettings.accentColor)
       }
       calculateDataSize()
       setIsPageReady(true)
@@ -159,6 +163,53 @@ export default function SettingsPage() {
             <Button onClick={handleResetProvider} variant="ghost" className="text-muted-foreground hover:text-foreground">
               Reconfigure
             </Button>
+          </div>
+
+          {/* Accent Color */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium text-muted-foreground">Accent Color</label>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { name: "Blue", value: "#2383e2" },
+                { name: "Purple", value: "#8b5cf6" },
+                { name: "Green", value: "#16a34a" },
+                { name: "Orange", value: "#f59e0b" },
+                { name: "Pink", value: "#ec4899" },
+                { name: "Slate", value: "#737373" },
+              ].map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => {
+                    const newcolor = color.value
+                    // Apply immediately for preview
+                    document.documentElement.style.setProperty("--primary", newcolor)
+                    document.documentElement.style.setProperty("--ring", newcolor)
+                    // Update state
+                    if (settings) {
+                      const updated = { ...settings, accentColor: newcolor }
+                      setSettings(updated)
+                      saveSettings(updated) // Auto-save for instant feel? Or wait for save button?
+                      // Let's rely on the main Save button for everything else, but color feels nice to be instant?
+                      // Actually, let's keep it consistent with other settings if possible, but "Save Changes" is inside Provider section.
+                      // We should probably move Save Changes to be global or duplicate it? 
+                      // The current "Save Changes" only saves provider/model settings. 
+                      // Let's make a separate save for accent or just update it globally.
+                      saveSettings(updated)
+                    }
+                  }}
+                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${(settings?.accentColor || "#2383e2") === color.value
+                    ? "border-foreground scale-110"
+                    : "border-transparent hover:scale-105"
+                    }`}
+                  style={{ backgroundColor: color.value }}
+                  title={color.name}
+                >
+                  {(settings?.accentColor || "#2383e2") === color.value && (
+                    <Check className="w-4 h-4 text-white drop-shadow-md" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {provider && (

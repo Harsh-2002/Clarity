@@ -2,14 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool } from "lucide-react"
+import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MobileDrawer } from "@/components/mobile-drawer"
 
 export function MinimalNav() {
   const pathname = usePathname()
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "Home" },
+    { href: "/journal", icon: BookOpen, label: "Journal" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
     { href: "/notes", icon: BookMarked, label: "Notes" },
@@ -28,13 +30,14 @@ export function MinimalNav() {
   }
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-16 hidden md:flex flex-col items-center justify-center gap-6 z-50 bg-background/50 backdrop-blur-sm border-r border-border/50">
+    <nav id="sidebar-nav" className="fixed left-0 top-0 h-full w-16 hidden md:flex flex-col items-center justify-center gap-6 z-50 bg-background/50 backdrop-blur-sm border-r border-border/50">
       {navItems.map((item) => {
         const isActive = pathname === item.href
         return (
           <Link
             key={item.href}
             href={item.href}
+            id={item.href === "/settings" ? "settings-btn" : undefined}
             onClick={(e) => handleNavClick(e, item.href)}
             className={cn(
               "p-3 rounded-full transition-all duration-300 group relative",
@@ -69,6 +72,7 @@ export function MobileNav() {
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "Home" },
+    { href: "/journal", icon: BookOpen, label: "Journal" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
     { href: "/notes", icon: BookMarked, label: "Notes" },
@@ -89,8 +93,8 @@ export function MobileNav() {
   return (
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden z-50">
       <div className="flex items-center gap-2 p-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-xl">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href
+        {navItems.slice(0, 5).map((item) => {
+          if (item.label === "Transcribe") return null // removing transcribe to replace with Drawer if desired? No keep it.
           return (
             <Link
               key={item.href}
@@ -98,7 +102,7 @@ export function MobileNav() {
               onClick={(e) => handleNavClick(e, item.href)}
               className={cn(
                 "p-3 rounded-full transition-all duration-300",
-                isActive
+                pathname === item.href
                   ? "bg-primary text-primary-foreground shadow-md"
                   : "text-muted-foreground hover:text-foreground"
               )}
@@ -106,14 +110,37 @@ export function MobileNav() {
               <item.icon
                 className={cn(
                   "w-5 h-5 transition-transform duration-300",
-                  isActive && "scale-110"
+                  pathname === item.href && "scale-110"
                 )}
-                strokeWidth={isActive ? 2.5 : 2}
+                strokeWidth={pathname === item.href ? 2.5 : 2}
               />
               <span className="sr-only">{item.label}</span>
             </Link>
           )
         })}
+        <MobileDrawer />
+        {navItems.slice(5).map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={(e) => handleNavClick(e, item.href)}
+            className={cn(
+              "p-3 rounded-full transition-all duration-300",
+              pathname === item.href
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <item.icon
+              className={cn(
+                "w-5 h-5 transition-transform duration-300",
+                pathname === item.href && "scale-110"
+              )}
+              strokeWidth={pathname === item.href ? 2.5 : 2}
+            />
+            <span className="sr-only">{item.label}</span>
+          </Link>
+        ))}
       </div>
     </nav>
   )

@@ -64,6 +64,7 @@ import {
 } from "lucide-react"
 import { Markdown } from "tiptap-markdown"
 import MermaidExtension from "./mermaid-extension"
+import { LinkExtension } from "./link-extension"
 
 interface NovelEditorProps {
     content: string
@@ -308,6 +309,11 @@ export default function NovelEditor({
             types: ['heading', 'paragraph'],
         }),
         MermaidExtension,
+        LinkExtension.configure({
+            onLinkClick: (title) => {
+                window.location.href = `/notes?q=${encodeURIComponent(title)}`
+            }
+        }) as any
     ]
 
     useEffect(() => {
@@ -392,7 +398,7 @@ export default function NovelEditor({
             <EditorRoot>
                 <EditorContent
                     immediatelyRender={false}
-                    initialContent={initialContent}
+                    initialContent={initialContent as any}
                     extensions={extensions}
                     editable={editable}
                     onUpdate={({ editor }) => {

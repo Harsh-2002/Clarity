@@ -4,53 +4,84 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import {
-    BookMarked,
-    CheckCircle2,
-    Clock,
-    Mic,
-    Plus,
-    ArrowRight,
-    ListTodo,
-    Columns3,
-    Calendar,
-    FileText,
-    PenTool
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from "@dnd-kit/core"
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy
+} from "@dnd-kit/sortable"
 
-interface Task {
-    id: string
-    text: string
-    completed: boolean
-    priority: string
-    dueDate: string | null
-    createdAt: string
-}
-
-interface Transcript {
-    id: string
-    name: string
-    createdAt: string
-}
+import { StatsCards, RecentNotesWidget, UpcomingTasksWidget, RecentTranscriptsWidget, RecentCanvasesWidget, QuickActionsWidget, Task, Transcript, Note, Canvas } from "@/components/dashboard/dashboard-widgets"
+import { ZenQuoteWidget } from "@/components/dashboard/zen-quote-widget"
+import { OnThisDayWidget } from "@/components/dashboard/on-this-day-widget"
+import { SortableWidget } from "@/components/dashboard/sortable-widget"
 
 export default function DashboardPage() {
     const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0 })
-    const [recentNotes, setRecentNotes] = useState<any[]>([])
+    const [recentNotes, setRecentNotes] = useState<Note[]>([])
     const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
     const [recentTranscripts, setRecentTranscripts] = useState<Transcript[]>([])
-    const [recentCanvases, setRecentCanvases] = useState<{ id: string; name: string; updatedAt: string }[]>([])
+    const [recentCanvases, setRecentCanvases] = useState<Canvas[]>([])
     const [currentTime, setCurrentTime] = useState(new Date())
     const [mounted, setMounted] = useState(false)
 
-    // Live clock - updates every second
+    // Widget Order State
+    const [widgets, setWidgets] = useState<string[]>([
+        "recent-notes",
+        "upcoming-tasks",
+        "recent-transcripts",
+        "recent-canvases"
+    ])
+
+    // Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    )
+
+    // Live clock
     useEffect(() => {
         setMounted(true)
-        const timer = setInterval(() => {
-            setCurrentTime(new Date())
-        }, 1000)
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+
+        // Load widget order from localStorage
+        const savedOrder = localStorage.getItem("dashboard-widget-order")
+        if (savedOrder) {
+            try {
+                setWidgets(JSON.parse(savedOrder))
+            } catch (e) {
+                console.error("Failed to parse widget order", e)
+            }
+        }
+
         return () => clearInterval(timer)
     }, [])
+
+    function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event
+
+        if (over && active.id !== over.id) {
+            setWidgets((items) => {
+                const oldIndex = items.indexOf(active.id.toString())
+                const newIndex = items.indexOf(over.id.toString())
+                const newOrder = arrayMove(items, oldIndex, newIndex)
+
+                // Save to localStorage
+                localStorage.setItem("dashboard-widget-order", JSON.stringify(newOrder))
+                return newOrder
+            })
+        }
+    }
 
     // Fetch data
     useEffect(() => {
@@ -73,8 +104,6 @@ export default function DashboardPage() {
                     const tasks: Task[] = await tasksRes.json()
                     const pending = tasks.filter(t => !t.completed)
                     const completed = tasks.filter(t => t.completed)
-
-                    // Get upcoming tasks (with due date, sorted by date)
                     const today = new Date()
                     today.setHours(0, 0, 0, 0)
                     const upcoming = pending
@@ -87,7 +116,7 @@ export default function DashboardPage() {
                 }
 
                 if (transcriptsRes.ok) {
-                    const transcripts: Transcript[] = await transcriptsRes.json()
+                    const transcripts = await transcriptsRes.json()
                     setRecentTranscripts(transcripts.slice(0, 3))
                     setStats(prev => ({ ...prev, transcripts: transcripts.length }))
                 }
@@ -102,28 +131,12 @@ export default function DashboardPage() {
             }
         }
 
-        fetchData()
-    }, [])
+        if (mounted) fetchData()
+    }, [mounted])
 
-    // Format time beautifully
-    const formatTime = () => {
-        return currentTime.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        })
-    }
-
-    const formatDate = () => {
-        return currentTime.toLocaleDateString([], {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
-    }
-
+    // Format time
+    const formatTime = () => currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+    const formatDate = () => currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     const getGreeting = () => {
         const hour = currentTime.getHours()
         if (hour < 12) return "Good morning"
@@ -131,17 +144,22 @@ export default function DashboardPage() {
         return "Good evening"
     }
 
-    // Fast, subtle animations
-    const fadeIn = {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        transition: { duration: 0.15 }
-    }
+    const fadeIn = { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.15 } }
+    const slideUp = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } }
 
-    const slideUp = {
-        initial: { opacity: 0, y: 8 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.2 }
+    const renderWidget = (id: string) => {
+        switch (id) {
+            case "recent-notes":
+                return <RecentNotesWidget notes={recentNotes} />
+            case "upcoming-tasks":
+                return <UpcomingTasksWidget tasks={upcomingTasks} />
+            case "recent-transcripts":
+                return <RecentTranscriptsWidget transcripts={recentTranscripts} />
+            case "recent-canvases":
+                return <RecentCanvasesWidget canvases={recentCanvases} />
+            default:
+                return null
+        }
     }
 
     if (!mounted) return null
@@ -149,257 +167,58 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen p-6 md:pl-24">
             <div className="max-w-5xl mx-auto space-y-8">
-                {/* Header with Live Clock */}
+                {/* Header */}
                 <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-bold tracking-tight">
-                            {getGreeting()}
-                        </h1>
-                        <p className="text-muted-foreground text-lg">
-                            Here&apos;s what&apos;s happening today.
-                        </p>
+                        <h1 className="text-4xl font-bold tracking-tight">{getGreeting()}</h1>
+                        <p className="text-muted-foreground text-lg">Here&apos;s what&apos;s happening today.</p>
                     </div>
-
-                    {/* Live Clock Display */}
                     <div className="text-right">
-                        <div className="text-4xl md:text-5xl font-light tracking-tight tabular-nums">
-                            {formatTime()}
-                        </div>
-                        <div className="text-muted-foreground mt-1">
-                            {formatDate()}
-                        </div>
+                        <div className="text-4xl md:text-5xl font-light tracking-tight tabular-nums">{formatTime()}</div>
+                        <div className="text-muted-foreground mt-1">{formatDate()}</div>
                     </div>
                 </motion.div>
 
-                {/* Stats Row */}
-                <motion.div {...slideUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
-                        <CardContent className="p-5 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Notes</p>
-                                <p className="text-3xl font-bold">{stats.notes}</p>
-                            </div>
-                            <div className="w-11 h-11 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                <BookMarked className="w-5 h-5" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
-                        <CardContent className="p-5 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Pending</p>
-                                <p className="text-3xl font-bold">{stats.pendingTasks}</p>
-                            </div>
-                            <div className="w-11 h-11 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                                <Clock className="w-5 h-5" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
-                        <CardContent className="p-5 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Completed</p>
-                                <p className="text-3xl font-bold">{stats.completedTasks}</p>
-                            </div>
-                            <div className="w-11 h-11 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
-                                <CheckCircle2 className="w-5 h-5" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* Stats */}
+                <motion.div {...slideUp}>
+                    <StatsCards stats={stats} />
                 </motion.div>
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column - Notes & Tasks */}
-                    <motion.div {...slideUp} className="lg:col-span-2 space-y-6">
-                        {/* Recent Notes */}
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <BookMarked className="w-4 h-4 text-blue-500" />
-                                Recent Notes
-                            </h2>
-                            <div className="space-y-2">
-                                {recentNotes.length > 0 ? (
-                                    recentNotes.map((note) => (
-                                        <Link key={note.id} href={`/notes?id=${note.id}`}>
-                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground/50 group-hover:text-primary transition-colors">
-                                                        <BookMarked className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{note.title || "Untitled"}</h3>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {new Date(note.updatedAt).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                            </div>
-                                        </Link>
-                                    ))
-                                ) : (
-                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                        No notes yet
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    {/* Reorderable Left Column */}
+                    <div className="lg:col-span-2">
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={widgets}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-6">
+                                    {widgets.map(id => (
+                                        <SortableWidget key={id} id={id}>
+                                            {renderWidget(id)}
+                                        </SortableWidget>
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    </div>
 
-                        {/* Upcoming Tasks */}
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-yellow-500" />
-                                Upcoming Tasks
-                            </h2>
-                            <div className="space-y-2">
-                                {upcomingTasks.length > 0 ? (
-                                    upcomingTasks.map((task) => (
-                                        <Link key={task.id} href="/tasks">
-                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                                                        <ListTodo className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{task.text}</h3>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Due: {new Date(task.dueDate!).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                            </div>
-                                        </Link>
-                                    ))
-                                ) : (
-                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                        No upcoming tasks with due dates
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Recent Transcriptions */}
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Mic className="w-4 h-4 text-purple-500" />
-                                Recent Transcriptions
-                            </h2>
-                            <div className="space-y-2">
-                                {recentTranscripts.length > 0 ? (
-                                    recentTranscripts.map((transcript) => (
-                                        <Link key={transcript.id} href="/transcripts">
-                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
-                                                        <FileText className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{transcript.name || "Recording"}</h3>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {new Date(transcript.createdAt).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                            </div>
-                                        </Link>
-                                    ))
-                                ) : (
-                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                        No transcriptions yet
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Recent Canvases */}
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <PenTool className="w-4 h-4 text-orange-500" />
-                                Recent Canvases
-                            </h2>
-                            <div className="space-y-2">
-                                {recentCanvases.length > 0 ? (
-                                    recentCanvases.map((canvas) => (
-                                        <Link key={canvas.id} href={`/canvas/${canvas.id}`}>
-                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
-                                                        <PenTool className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{canvas.name || "Untitled Canvas"}</h3>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {new Date(canvas.updatedAt).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                            </div>
-                                        </Link>
-                                    ))
-                                ) : (
-                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
-                                        No canvases yet
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    {/* Right Column - Quick Actions */}
+                    {/* Right Column - Fixed */}
                     <motion.div {...slideUp} className="space-y-6">
-                        <h2 className="text-xl font-semibold">Quick Actions</h2>
-                        <div className="grid grid-cols-1 gap-3">
-                            <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
-                                <Link href="/transcribe">
-                                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 mr-4">
-                                        <Mic className="w-4 h-4" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <div className="font-medium">Record Audio</div>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground/30 ml-2" />
-                                </Link>
-                            </Button>
-                            <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
-                                <Link href="/tasks">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mr-4">
-                                        <ListTodo className="w-4 h-4" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <div className="font-medium">Manage Tasks</div>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground/30 ml-2" />
-                                </Link>
-                            </Button>
-                            <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
-                                <Link href="/calendar">
-                                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mr-4">
-                                        <Calendar className="w-4 h-4" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <div className="font-medium">View Calendar</div>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground/30 ml-2" />
-                                </Link>
-                            </Button>
-                            <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
-                                <Link href="/notes">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 mr-4">
-                                        <Plus className="w-4 h-4" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <div className="font-medium">New Note</div>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground/30 ml-2" />
-                                </Link>
-                            </Button>
-                        </div>
+                        <QuickActionsWidget />
+                        <ZenQuoteWidget />
                     </motion.div>
                 </div>
+
+                {/* Bottom Section - On This Day */}
+                <motion.div {...slideUp} className="w-full mt-8">
+                    <OnThisDayWidget />
+                </motion.div>
             </div>
         </div>
     )

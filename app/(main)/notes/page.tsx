@@ -16,6 +16,7 @@ import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check,
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import TodoList from "@/components/todo/todo-list"
+import { BacklinksPanel } from "@/components/editor/backlinks-panel"
 
 const NovelEditor = dynamic(() => import("@/components/editor/novel-editor"), {
   ssr: false,
@@ -87,6 +88,14 @@ export default function NotesPage() {
       if (res.ok) {
         setNotes(prev => prev.map(n => n.id === note.id ? note : n))
         setSaveStatus("saved")
+
+        // Update links
+        fetch(`/api/notes/${note.id}/links`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: note.content })
+        }).catch(console.error)
+
         setTimeout(() => setSaveStatus("idle"), 2000)
       }
     } catch (err) {
@@ -549,7 +558,6 @@ export default function NotesPage() {
     wrapper.style.cssText = 'background: white !important; padding: 0 !important;'
     wrapper.appendChild(clone)
 
-    // Dynamic import html2pdf
     const html2pdf = (await import('html2pdf.js')).default
 
     // Generate PDF with optimized settings
@@ -569,7 +577,7 @@ export default function NotesPage() {
         orientation: 'portrait'
       },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    }
+    } as any
 
     html2pdf().set(opt).from(wrapper).save()
   }
@@ -823,7 +831,7 @@ export default function NotesPage() {
                   try {
                     setContent(note.content)
                   } catch {
-                    setContent({ time: Date.now(), blocks: [] })
+                    setContent(JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }))
                   }
                 }}
                 className={cn(
@@ -948,6 +956,7 @@ export default function NotesPage() {
                   onChange={updateNote}
                   editable={true}
                 />
+                <BacklinksPanel noteId={selectedNote.id} className="mt-8" />
               </div>
             </div>
           </>

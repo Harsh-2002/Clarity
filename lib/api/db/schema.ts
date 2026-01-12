@@ -8,6 +8,7 @@ export const notes = sqliteTable('notes', {
     isPublished: integer('is_published', { mode: 'boolean' }).default(false),
     publishedSlug: text('published_slug').unique(),
     version: integer('version').default(1),
+    tags: text('tags'), // JSON array
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }), // Soft delete
@@ -104,6 +105,7 @@ export const tasks = sqliteTable('tasks', {
     priority: text('priority').default('medium'), // 'low', 'medium', 'high'
     dueDate: integer('due_date', { mode: 'timestamp' }),
     position: integer('position').default(0), // For sorting
+    tags: text('tags'), // JSON array
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
@@ -137,10 +139,34 @@ export const canvases = sqliteTable('canvases', {
     name: text('name').notNull().default('Untitled Canvas'),
     data: text('data').notNull(), // JSON blob from Excalidraw
     thumbnail: text('thumbnail'), // Base64 preview image (optional)
+    tags: text('tags'), // JSON array
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
     updatedAtIdx: index('canvases_updated_at_idx').on(table.updatedAt),
+}));
+
+// Journal Entries (Daily Journal / Quick Capture)
+export const journalEntries = sqliteTable('journal_entries', {
+    id: text('id').primaryKey(),
+    content: text('content').notNull(),
+    mood: text('mood'), // 'great' | 'good' | 'okay' | 'bad' | null
+    tags: text('tags'), // JSON array
+    convertedTo: text('converted_to'), // 'task:id' | 'note:id' | 'canvas:id'
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+    createdAtIdx: index('journal_created_at_idx').on(table.createdAt),
+}));
+
+// Note Links (for [[Note Title]] backlinks)
+export const noteLinks = sqliteTable('note_links', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sourceNoteId: text('source_note_id').notNull().references(() => notes.id, { onDelete: 'cascade' }),
+    targetNoteId: text('target_note_id').notNull().references(() => notes.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+    sourceIdx: index('note_links_source_idx').on(table.sourceNoteId),
+    targetIdx: index('note_links_target_idx').on(table.targetNoteId),
 }));
 
 // Type exports
@@ -158,4 +184,6 @@ export type KanbanColumn = typeof kanbanColumns.$inferSelect;
 export type KanbanCard = typeof kanbanCards.$inferSelect;
 export type Canvas = typeof canvases.$inferSelect;
 export type NewCanvas = typeof canvases.$inferInsert;
-
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type NewJournalEntry = typeof journalEntries.$inferInsert;
+export type NoteLink = typeof noteLinks.$inferSelect;

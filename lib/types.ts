@@ -56,6 +56,7 @@ export interface AppSettings {
   autoFineTune: boolean
   encryptionDerived: boolean
   theme: "light" | "dark" | "system"
+  accentColor?: string
   onboardingComplete: boolean
 }
 
