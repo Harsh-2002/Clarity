@@ -48,6 +48,11 @@
 /* Smooth scrolling behavior */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
 }
 
 /* Page transition effects */

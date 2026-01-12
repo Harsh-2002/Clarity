@@ -1,13 +1,26 @@
 import { db } from "@/lib/api/db/client"
 import { canvases } from "@/lib/api/db/schema"
 import { eq } from "drizzle-orm"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+
+// Validation schema for updates
+const updateCanvasSchema = z.object({
+    name: z.string().min(1).max(200).optional(),
+    data: z.string().optional(),
+    thumbnail: z.string().optional(),
+})
 
 // GET /api/canvas/:id - Get single canvas with full data
 export async function GET(
-    req: Request,
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify authentication
+    const userId = await verifyAuth(req)
+    if (!userId) return unauthorized()
+
     const { id } = await params
 
     try {
@@ -24,20 +37,31 @@ export async function GET(
         return NextResponse.json(canvas[0])
     } catch (error) {
         console.error("Failed to fetch canvas:", error)
-        return NextResponse.json({ error: "Failed to fetch canvas" }, { status: 500 })
+        return serverError("Failed to fetch canvas")
     }
 }
 
 // PUT /api/canvas/:id - Update canvas
 export async function PUT(
-    req: Request,
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify authentication
+    const userId = await verifyAuth(req)
+    if (!userId) return unauthorized()
+
     const { id } = await params
 
     try {
         const body = await req.json()
-        const { name, data, thumbnail } = body
+
+        // Validate input
+        const result = updateCanvasSchema.safeParse(body)
+        if (!result.success) {
+            return badRequest("Invalid input: " + result.error.message)
+        }
+
+        const { name, data, thumbnail } = result.data
 
         await db
             .update(canvases)
@@ -52,15 +76,19 @@ export async function PUT(
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("Failed to update canvas:", error)
-        return NextResponse.json({ error: "Failed to update canvas" }, { status: 500 })
+        return serverError("Failed to update canvas")
     }
 }
 
 // DELETE /api/canvas/:id - Delete canvas
 export async function DELETE(
-    req: Request,
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    // Verify authentication
+    const userId = await verifyAuth(req)
+    if (!userId) return unauthorized()
+
     const { id } = await params
 
     try {
@@ -68,6 +96,6 @@ export async function DELETE(
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("Failed to delete canvas:", error)
-        return NextResponse.json({ error: "Failed to delete canvas" }, { status: 500 })
+        return serverError("Failed to delete canvas")
     }
 }

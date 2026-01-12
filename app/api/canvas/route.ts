@@ -1,10 +1,23 @@
 import { db } from "@/lib/api/db/client"
 import { canvases } from "@/lib/api/db/schema"
 import { eq, desc } from "drizzle-orm"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+
+// Validation schemas
+const createCanvasSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1).max(200).optional(),
+    data: z.string().optional(),
+})
 
 // GET /api/canvas - List all canvases
-export async function GET() {
+export async function GET(req: NextRequest) {
+    // Verify authentication
+    const userId = await verifyAuth(req)
+    if (!userId) return unauthorized()
+
     try {
         const allCanvases = await db
             .select({
@@ -20,15 +33,26 @@ export async function GET() {
         return NextResponse.json(allCanvases)
     } catch (error) {
         console.error("Failed to fetch canvases:", error)
-        return NextResponse.json({ error: "Failed to fetch canvases" }, { status: 500 })
+        return serverError("Failed to fetch canvases")
     }
 }
 
 // POST /api/canvas - Create new canvas
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    // Verify authentication
+    const userId = await verifyAuth(req)
+    if (!userId) return unauthorized()
+
     try {
         const body = await req.json()
-        const { id, name, data } = body
+
+        // Validate input
+        const result = createCanvasSchema.safeParse(body)
+        if (!result.success) {
+            return badRequest("Invalid input: " + result.error.message)
+        }
+
+        const { id, name, data } = result.data
 
         await db.insert(canvases).values({
             id,
@@ -41,6 +65,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, id })
     } catch (error) {
         console.error("Failed to create canvas:", error)
-        return NextResponse.json({ error: "Failed to create canvas" }, { status: 500 })
+        return serverError("Failed to create canvas")
     }
 }

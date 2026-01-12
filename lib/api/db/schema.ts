@@ -62,7 +62,9 @@ export const sessions = sqliteTable('sessions', {
     deviceName: text('device_name'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+    expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt),
+}));
 
 // Users (Single Admin usually, but extensible)
 export const users = sqliteTable('users', {
@@ -90,7 +92,9 @@ export const syncLog = sqliteTable('sync_log', {
     operation: text('operation').notNull(), // 'create', 'update', 'delete'
     version: integer('version').notNull(),
     timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+    entityIdx: index('sync_log_entity_idx').on(table.entityType, table.entityId),
+}));
 
 // Tasks
 export const tasks = sqliteTable('tasks', {
@@ -102,7 +106,10 @@ export const tasks = sqliteTable('tasks', {
     position: integer('position').default(0), // For sorting
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+    dueDateIdx: index('tasks_due_date_idx').on(table.dueDate),
+    completedIdx: index('tasks_completed_idx').on(table.completed),
+}));
 
 // Kanban Columns
 export const kanbanColumns = sqliteTable('kanban_columns', {
@@ -120,17 +127,21 @@ export const kanbanCards = sqliteTable('kanban_cards', {
     description: text('description'),
     position: integer('position').default(0),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+    columnIdIdx: index('kanban_cards_column_id_idx').on(table.columnId),
+}));
 
-// Canvases (Tldraw whiteboard data)
+// Canvases (Excalidraw whiteboard data)
 export const canvases = sqliteTable('canvases', {
     id: text('id').primaryKey(),
     name: text('name').notNull().default('Untitled Canvas'),
-    data: text('data').notNull(), // JSON blob from Tldraw
+    data: text('data').notNull(), // JSON blob from Excalidraw
     thumbnail: text('thumbnail'), // Base64 preview image (optional)
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+    updatedAtIdx: index('canvases_updated_at_idx').on(table.updatedAt),
+}));
 
 // Type exports
 export type Note = typeof notes.$inferSelect;

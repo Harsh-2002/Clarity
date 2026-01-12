@@ -1,59 +1,104 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Trash2, GripVertical } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface TodoItem {
     id: string
     text: string
     completed: boolean
+    priority?: string
+    createdAt?: string
 }
-
-const STORAGE_KEY = "clarity-todos"
 
 export default function TodoList() {
     const [todos, setTodos] = useState<TodoItem[]>([])
     const [newTodo, setNewTodo] = useState("")
-    const [mounted, setMounted] = useState(false)
+    const [loading, setLoading] = useState(true)
 
-    // Load from localStorage
-    useEffect(() => {
-        setMounted(true)
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-            try {
-                setTodos(JSON.parse(saved))
-            } catch {
-                setTodos([])
+    // Fetch todos from API
+    const fetchTodos = useCallback(async () => {
+        try {
+            const res = await fetch("/api/tasks")
+            if (res.ok) {
+                const data = await res.json()
+                setTodos(data)
             }
+        } catch (error) {
+            console.error("Failed to fetch todos:", error)
+        } finally {
+            setLoading(false)
         }
     }, [])
 
-    // Save to localStorage
     useEffect(() => {
-        if (mounted) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
-        }
-    }, [todos, mounted])
+        fetchTodos()
+    }, [fetchTodos])
 
-    const addTodo = () => {
+    const addTodo = async () => {
         if (!newTodo.trim()) return
+
         const todo: TodoItem = {
             id: crypto.randomUUID(),
             text: newTodo.trim(),
-            completed: false
+            completed: false,
+            priority: "medium",
+            createdAt: new Date().toISOString(),
         }
-        setTodos([...todos, todo])
+
+        // Optimistic update
+        setTodos([todo, ...todos])
         setNewTodo("")
+
+        try {
+            const res = await fetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(todo),
+            })
+            if (!res.ok) {
+                // Revert on error
+                setTodos(todos)
+                toast.error("Failed to add task")
+            }
+        } catch {
+            setTodos(todos)
+            toast.error("Failed to add task")
+        }
     }
 
-    const toggleTodo = (id: string) => {
+    const toggleTodo = async (id: string) => {
+        const todo = todos.find(t => t.id === id)
+        if (!todo) return
+
+        // Optimistic update
         setTodos(todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+
+        try {
+            await fetch("/api/tasks", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, completed: !todo.completed }),
+            })
+        } catch {
+            // Revert on error
+            setTodos(todos)
+        }
     }
 
-    const deleteTodo = (id: string) => {
+    const deleteTodo = async (id: string) => {
+        // Optimistic update
+        const previousTodos = todos
         setTodos(todos.filter(t => t.id !== id))
+
+        try {
+            await fetch(`/api/tasks?id=${id}`, { method: "DELETE" })
+        } catch {
+            // Revert on error
+            setTodos(previousTodos)
+            toast.error("Failed to delete task")
+        }
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -63,7 +108,13 @@ export default function TodoList() {
         }
     }
 
-    if (!mounted) return null
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+        )
+    }
 
     const pending = todos.filter(t => !t.completed)
     const completed = todos.filter(t => t.completed)

@@ -99,7 +99,7 @@ export default function CanvasEditorPage({ params }: { params: Promise<{ id: str
     }
 
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-screen flex flex-col overflow-hidden">
             {/* Header */}
             <div className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ export default function CanvasEditorPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Canvas */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative overflow-hidden">
                 {canvas && (
                     <TldrawEditor
                         initialData={canvas.data}
