@@ -1,16 +1,15 @@
 "use client"
 
-import { useRef, useEffect, useCallback } from "react"
+import { useRef, useCallback } from "react"
 import { Tldraw, Editor, getSnapshot, loadSnapshot, TLStoreSnapshot } from "tldraw"
 import "tldraw/tldraw.css"
-import { useTheme } from "next-themes"
 
 interface CanvasEditorProps {
     initialData: string
     onSave: (data: string) => void
 }
 
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number) {
     let timeoutId: NodeJS.Timeout
     return (...args: Parameters<T>) => {
         clearTimeout(timeoutId)
@@ -20,9 +19,10 @@ function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
 
 export default function CanvasEditor({ initialData, onSave }: CanvasEditorProps) {
     const editorRef = useRef<Editor | null>(null)
-    const { resolvedTheme } = useTheme()
+    const onSaveRef = useRef(onSave)
+    onSaveRef.current = onSave
 
-    // Load initial data when editor mounts
+    // Handle editor mount - load data and set up auto-save
     const handleMount = useCallback((editor: Editor) => {
         editorRef.current = editor
 
@@ -35,26 +35,19 @@ export default function CanvasEditor({ initialData, onSave }: CanvasEditorProps)
                 console.error("Failed to load canvas data:", e)
             }
         }
-    }, [initialData])
 
-    // Auto-save on changes (debounced)
-    useEffect(() => {
-        const editor = editorRef.current
-        if (!editor) return
-
+        // Set up auto-save listener (debounced 2 seconds)
         const debouncedSave = debounce(() => {
             const snapshot = getSnapshot(editor.store)
-            onSave(JSON.stringify(snapshot))
+            onSaveRef.current(JSON.stringify(snapshot))
         }, 2000)
 
-        // Listen to store changes
-        const unsubscribe = editor.store.listen(
+        // Listen to store changes from user actions
+        editor.store.listen(
             () => debouncedSave(),
             { source: "user", scope: "document" }
         )
-
-        return () => unsubscribe()
-    }, [onSave])
+    }, [initialData])
 
     return (
         <div className="w-full h-full tldraw-container">
@@ -90,3 +83,4 @@ export default function CanvasEditor({ initialData, onSave }: CanvasEditorProps)
         </div>
     )
 }
+
