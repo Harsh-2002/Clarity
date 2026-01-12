@@ -36,7 +36,7 @@ export function BookmarkCard({ bookmark, onDelete }: BookmarkCardProps) {
     }
 
     return (
-        <Card className="group relative overflow-hidden border-border/50 bg-background hover:shadow-lg transition-all duration-300">
+        <Card className="group relative overflow-hidden border-border/50 bg-background hover:shadow-lg transition-all duration-300 transform-gpu">
             {/* Delete Button */}
             <Button
                 variant="ghost"

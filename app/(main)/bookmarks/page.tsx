@@ -61,18 +61,15 @@ export default function BookmarksPage() {
 
     return (
         <div className="min-h-screen p-6 md:pl-24">
-            <div className="max-w-6xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
-                <motion.div {...fadeIn} className="space-y-2">
-                    <h1 className="text-3xl font-bold flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-primary/10">
-                            <Bookmark className="h-6 w-6 text-primary" />
-                        </div>
-                        Bookmarks
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Save links with rich previews. Paste a URL below to get started.
-                    </p>
+                <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold tracking-tight">Bookmarks</h1>
+                        <p className="text-muted-foreground">
+                            {bookmarks.length} bookmark{bookmarks.length !== 1 ? "s" : ""}
+                        </p>
+                    </div>
                 </motion.div>
 
                 {/* Add Bookmark Input */}
@@ -92,13 +89,13 @@ export default function BookmarksPage() {
                             ))}
                         </div>
                     ) : bookmarks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="p-4 rounded-full bg-secondary/50 mb-4">
-                                <Link2 className="h-10 w-10 text-muted-foreground/50" />
+                        <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-border/50 rounded-xl bg-muted/50">
+                            <div className="p-3 rounded-full bg-background mb-4">
+                                <Bookmark className="h-6 w-6 text-muted-foreground/50" />
                             </div>
-                            <h3 className="text-lg font-medium text-muted-foreground">No bookmarks yet</h3>
-                            <p className="text-sm text-muted-foreground/70 mt-1">
-                                Paste a link above to save your first bookmark
+                            <h3 className="text-lg font-medium">No bookmarks yet</h3>
+                            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                                Paste a URL above to save your first bookmark with a rich preview.
                             </p>
                         </div>
                     ) : (
