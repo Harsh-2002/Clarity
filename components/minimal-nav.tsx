@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen } from "lucide-react"
+import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen, Bookmark } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileDrawer } from "@/components/mobile-drawer"
 
@@ -19,6 +19,7 @@ export function MinimalNav() {
     { href: "/kanban", icon: Columns3, label: "Kanban" },
     { href: "/calendar", icon: Calendar, label: "Calendar" },
     { href: "/canvas", icon: PenTool, label: "Canvas" },
+    { href: "/bookmarks", icon: Bookmark, label: "Bookmarks" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ]
 

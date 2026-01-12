@@ -187,3 +187,22 @@ export type NewCanvas = typeof canvases.$inferInsert;
 export type JournalEntry = typeof journalEntries.$inferSelect;
 export type NewJournalEntry = typeof journalEntries.$inferInsert;
 export type NoteLink = typeof noteLinks.$inferSelect;
+
+// Bookmarks (Link Previews)
+export const bookmarks = sqliteTable('bookmarks', {
+    id: text('id').primaryKey(),
+    url: text('url').notNull(),
+    title: text('title'),
+    description: text('description'),
+    image: text('image'),
+    favicon: text('favicon'),
+    tags: text('tags'), // JSON array
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => ({
+    urlIdx: index('bookmarks_url_idx').on(table.url),
+    createdAtIdx: index('bookmarks_created_at_idx').on(table.createdAt),
+}));
+
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type NewBookmark = typeof bookmarks.$inferInsert;
