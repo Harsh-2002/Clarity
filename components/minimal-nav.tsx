@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar } from "lucide-react"
+import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MinimalNav() {
@@ -16,6 +16,7 @@ export function MinimalNav() {
     { href: "/tasks", icon: ListTodo, label: "Tasks" },
     { href: "/kanban", icon: Columns3, label: "Kanban" },
     { href: "/calendar", icon: Calendar, label: "Calendar" },
+    { href: "/canvas", icon: PenTool, label: "Canvas" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
@@ -74,6 +75,7 @@ export function MobileNav() {
     { href: "/tasks", icon: ListTodo, label: "Tasks" },
     { href: "/kanban", icon: Columns3, label: "Kanban" },
     { href: "/calendar", icon: Calendar, label: "Calendar" },
+    { href: "/canvas", icon: PenTool, label: "Canvas" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ]
 

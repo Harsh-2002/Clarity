@@ -13,7 +13,8 @@ import {
     ListTodo,
     Columns3,
     Calendar,
-    FileText
+    FileText,
+    PenTool
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -34,10 +35,11 @@ interface Transcript {
 }
 
 export default function DashboardPage() {
-    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0 })
+    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0 })
     const [recentNotes, setRecentNotes] = useState<any[]>([])
     const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
     const [recentTranscripts, setRecentTranscripts] = useState<Transcript[]>([])
+    const [recentCanvases, setRecentCanvases] = useState<{ id: string; name: string; updatedAt: string }[]>([])
     const [currentTime, setCurrentTime] = useState(new Date())
     const [mounted, setMounted] = useState(false)
 
@@ -54,10 +56,11 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [notesRes, tasksRes, transcriptsRes] = await Promise.all([
+                const [notesRes, tasksRes, transcriptsRes, canvasesRes] = await Promise.all([
                     fetch("/api/v1/notes"),
                     fetch("/api/tasks"),
-                    fetch("/api/v1/transcripts")
+                    fetch("/api/v1/transcripts"),
+                    fetch("/api/canvas")
                 ])
 
                 if (notesRes.ok) {
@@ -87,6 +90,12 @@ export default function DashboardPage() {
                     const transcripts: Transcript[] = await transcriptsRes.json()
                     setRecentTranscripts(transcripts.slice(0, 3))
                     setStats(prev => ({ ...prev, transcripts: transcripts.length }))
+                }
+
+                if (canvasesRes.ok) {
+                    const canvases = await canvasesRes.json()
+                    setRecentCanvases(canvases.slice(0, 3))
+                    setStats(prev => ({ ...prev, canvases: canvases.length }))
                 }
             } catch (error) {
                 console.error("Failed to load dashboard data", error)
@@ -300,6 +309,40 @@ export default function DashboardPage() {
                                 ) : (
                                     <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
                                         No transcriptions yet
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Recent Canvases */}
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <PenTool className="w-4 h-4 text-orange-500" />
+                                Recent Canvases
+                            </h2>
+                            <div className="space-y-2">
+                                {recentCanvases.length > 0 ? (
+                                    recentCanvases.map((canvas) => (
+                                        <Link key={canvas.id} href={`/canvas/${canvas.id}`}>
+                                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+                                                        <PenTool className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium group-hover:text-primary transition-colors">{canvas.name || "Untitled Canvas"}</h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {new Date(canvas.updatedAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                            </div>
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                                        No canvases yet
                                     </div>
                                 )}
                             </div>

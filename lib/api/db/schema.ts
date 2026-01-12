@@ -122,6 +122,16 @@ export const kanbanCards = sqliteTable('kanban_cards', {
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// Canvases (Tldraw whiteboard data)
+export const canvases = sqliteTable('canvases', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull().default('Untitled Canvas'),
+    data: text('data').notNull(), // JSON blob from Tldraw
+    thumbnail: text('thumbnail'), // Base64 preview image (optional)
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 // Type exports
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
@@ -135,3 +145,6 @@ export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type KanbanColumn = typeof kanbanColumns.$inferSelect;
 export type KanbanCard = typeof kanbanCards.$inferSelect;
+export type Canvas = typeof canvases.$inferSelect;
+export type NewCanvas = typeof canvases.$inferInsert;
+
