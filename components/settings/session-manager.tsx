@@ -16,9 +16,14 @@ export function SessionManager() {
 
     const fetchSessions = async () => {
         setIsLoading(true)
-        const data = await getSessions()
-        setSessions(data)
-        setIsLoading(false)
+        try {
+            const data = await getSessions()
+            setSessions(data)
+        } catch (error) {
+            console.error("Failed to fetch sessions", error)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     useEffect(() => {

@@ -287,6 +287,10 @@ export async function getSessions(): Promise<Session[]> {
   try {
     return await apiFetch<Session[]>("/auth/sessions")
   } catch (e) {
+    // Suppress unauthorized errors as they are expected when session expires
+    if (e instanceof Error && e.message === "Unauthorized") {
+      return []
+    }
     console.error("Failed to fetch sessions", e)
     return []
   }

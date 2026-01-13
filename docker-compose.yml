@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: clarity_app
+    container_name: clarity
     restart: always
     ports:
       - "3000:3000"
@@ -13,7 +13,7 @@ services:
       - NODE_ENV=production
       - DATABASE_PATH=/data/clarity.db
     volumes:
-      - ./data:/data
+      - clarity_data:/data
     env_file:
       - .env
 

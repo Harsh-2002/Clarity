@@ -44,22 +44,49 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const appSettings = await getSettings()
-      setIsOnboarded(true)
-      setSettings(appSettings)
-      setSelectedTranscriptionModel(appSettings.selectedTranscriptionModel || "")
-      setSelectedFinetuneModel(appSettings.selectedFinetuneModel || "")
-      setAutoFineTune(appSettings.autoFineTune || false)
-      if (appSettings.selectedProvider) {
-        const prov = await getProvider(appSettings.selectedProvider)
-        setProvider(prov)
+      // Try to load accent color from local storage first for immediate UI feedback
+      const localAccent = localStorage.getItem('clarity_accent_color')
+      if (localAccent) {
+        // Apply instantly
+        document.documentElement.style.setProperty("--primary", localAccent)
+        document.documentElement.style.setProperty("--ring", localAccent)
+
+        // Optimistically update settings state so the UI shows the correct checkmark immediately
+        setSettings(prev => prev ? { ...prev, accentColor: localAccent } : {
+          accentColor: localAccent,
+          theme: 'system',
+          onboardingComplete: true,
+          encryptionDerived: true,
+          autoFineTune: false
+        } as AppSettings)
       }
-      if (appSettings.accentColor) {
-        document.documentElement.style.setProperty("--primary", appSettings.accentColor)
-        document.documentElement.style.setProperty("--ring", appSettings.accentColor)
+
+      try {
+        const appSettings = await getSettings()
+        setIsOnboarded(true)
+        setSettings(appSettings)
+        setSelectedTranscriptionModel(appSettings.selectedTranscriptionModel || "")
+        setSelectedFinetuneModel(appSettings.selectedFinetuneModel || "")
+        setAutoFineTune(appSettings.autoFineTune || false)
+        if (appSettings.selectedProvider) {
+          const prov = await getProvider(appSettings.selectedProvider)
+          setProvider(prov)
+        }
+
+        // Apply color from settings (source of truth)
+        if (appSettings.accentColor) {
+          document.documentElement.style.setProperty("--primary", appSettings.accentColor)
+          document.documentElement.style.setProperty("--ring", appSettings.accentColor)
+          // Sync local storage if different
+          if (localAccent !== appSettings.accentColor) {
+            localStorage.setItem('clarity_accent_color', appSettings.accentColor)
+          }
+        }
+        calculateDataSize()
+        setIsPageReady(true)
+      } catch (e) {
+        console.error("Failed to load settings", e)
       }
-      calculateDataSize()
-      setIsPageReady(true)
     }
     loadData()
   }, [router, calculateDataSize])
@@ -167,7 +194,7 @@ export default function SettingsPage() {
 
           {/* Accent Color */}
           <div className="space-y-4">
-            <label className="text-sm font-medium text-muted-foreground">Accent Color</label>
+            <label className="text-sm font-medium text-muted-foreground mb-3 block">Accent Color</label>
             <div className="flex flex-wrap gap-3">
               {[
                 { name: "Blue", value: "#2383e2" },
@@ -188,12 +215,7 @@ export default function SettingsPage() {
                     if (settings) {
                       const updated = { ...settings, accentColor: newcolor }
                       setSettings(updated)
-                      saveSettings(updated) // Auto-save for instant feel? Or wait for save button?
-                      // Let's rely on the main Save button for everything else, but color feels nice to be instant?
-                      // Actually, let's keep it consistent with other settings if possible, but "Save Changes" is inside Provider section.
-                      // We should probably move Save Changes to be global or duplicate it? 
-                      // The current "Save Changes" only saves provider/model settings. 
-                      // Let's make a separate save for accent or just update it globally.
+                      localStorage.setItem('clarity_accent_color', newcolor)
                       saveSettings(updated)
                     }
                   }}

@@ -21,10 +21,23 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
             // Load and apply accent color from settings
             try {
+                // Try local storage first for immediate application (avoids flash)
+                const localAccent = localStorage.getItem('clarity_accent_color')
+                if (localAccent) {
+                    document.documentElement.style.setProperty("--primary", localAccent)
+                    document.documentElement.style.setProperty("--ring", localAccent)
+                }
+
                 const settings = await getSettings()
                 if (settings?.accentColor) {
+                    // Update CSS variables
                     document.documentElement.style.setProperty("--primary", settings.accentColor)
                     document.documentElement.style.setProperty("--ring", settings.accentColor)
+
+                    // Sync local storage
+                    if (localAccent !== settings.accentColor) {
+                        localStorage.setItem('clarity_accent_color', settings.accentColor)
+                    }
                 }
             } catch (e) {
                 // Ignore settings load errors
