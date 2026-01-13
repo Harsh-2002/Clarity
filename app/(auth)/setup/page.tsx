@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, ArrowRight, RefreshCw, Copy, Check, Dices } from "lucide-react"
@@ -8,7 +8,8 @@ import { Loader2, ArrowRight, RefreshCw, Copy, Check, Dices } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { setAccessToken } from "@/lib/storage"
+import { clearAccessToken, setAccessToken } from "@/lib/storage"
+import { handleDestination, resolveAppDestination } from "@/lib/client/auth-flow"
 
 export default function SetupPage() {
     const [username, setUsername] = useState("")
@@ -17,6 +18,30 @@ export default function SetupPage() {
     const [error, setError] = useState("")
     const [copied, setCopied] = useState("")
     const router = useRouter()
+
+    useEffect(() => {
+        let active = true
+        const guard = async () => {
+            const destination = await resolveAppDestination()
+            if (!active) return
+
+            if (destination.path === "/setup") {
+                if (destination.clearToken) clearAccessToken()
+                return
+            }
+
+            handleDestination(router, destination)
+        }
+
+        guard().catch(() => {
+            if (!active) return
+            clearAccessToken()
+        })
+
+        return () => {
+            active = false
+        }
+    }, [router])
 
     const generatePassword = () => {
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"

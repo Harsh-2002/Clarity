@@ -4,8 +4,9 @@ import * as schema from './schema';
 import { existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
-// Get database URL from environment
-const databaseUrl = process.env.DATABASE_URL || 'file:./data/db/clarity.db';
+// Get database path from environment (single source)
+const rawDatabase = process.env.DATABASE_PATH || 'file:./data/clarity.db'
+const databaseUrl = rawDatabase.startsWith('file:') ? rawDatabase : `file:${rawDatabase}`
 
 // Extract file path from URL
 const dbPath = databaseUrl.replace('file:', '');

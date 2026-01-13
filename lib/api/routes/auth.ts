@@ -35,6 +35,16 @@ async function generateAccessToken(userId: string): Promise<string> {
         .sign(getJwtSecret());
 }
 
+function setAccessCookie(c: any, token: string) {
+    setCookie(c, 'access_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+        maxAge: 15 * 60, // 15 minutes
+        path: '/',
+    });
+}
+
 // Check if setup is required
 auth.get('/status', async (c) => {
     const config = await db.query.systemConfig.findFirst();
@@ -77,6 +87,7 @@ auth.post('/setup', async (c) => {
         // Store session
         await db.insert(sessions).values({
             id: sessionId,
+            userId,
             refreshToken,
             deviceName: c.req.header('User-Agent') || 'Unknown',
             createdAt: new Date(),
@@ -91,6 +102,7 @@ auth.post('/setup', async (c) => {
             maxAge: 7 * 24 * 60 * 60, // 7 days
             path: '/',
         });
+        setAccessCookie(c, accessToken);
 
         return c.json({ success: true, accessToken });
     } catch (err) {
@@ -131,6 +143,7 @@ auth.post('/login', async (c) => {
         // Store session
         await db.insert(sessions).values({
             id: sessionId,
+            userId: user.id,
             refreshToken,
             deviceName: c.req.header('User-Agent') || 'Unknown',
             createdAt: new Date(),
@@ -145,8 +158,10 @@ auth.post('/login', async (c) => {
             maxAge: 7 * 24 * 60 * 60, // 7 days
             path: '/',
         });
+        setAccessCookie(c, accessToken);
 
         return c.json({ accessToken });
+
     } catch (err) {
         if (err instanceof z.ZodError) {
             return c.json({ error: 'Validation error', details: err.errors }, 400);
@@ -183,18 +198,9 @@ auth.post('/refresh', async (c) => {
         .set({ refreshToken: newRefreshToken })
         .where(eq(sessions.id, session.id));
 
-    // Generate new access token (We need userId here ideally, but for now assuming valid session implies valid user)
-    // To be perfectly strict, we should link session to userId in schema, but for single user it's fine.
-    // Wait, generateAccessToken needs a sub (user id).
-    // Let's use 'admin' generic ID or modify schema later. 
-    // Ideally we store userId in session.
-    // For this migration, let's look up the ONLY user to get their ID, or use 'admin-id' placeholder if not strict.
-    // BETTER FIX: Add userId to sessions table. But to avoid another migration right now:
-    // Just fetch the first user. It's a single user app.
-    const user = await db.query.users.findFirst();
-    const userId = user?.id || 'admin';
+    // Generate new access token using session.userId
+    const accessToken = await generateAccessToken(session.userId);
 
-    const accessToken = await generateAccessToken(userId);
 
     // Set new refresh token cookie
     setCookie(c, 'refresh_token', newRefreshToken, {
@@ -204,6 +210,7 @@ auth.post('/refresh', async (c) => {
         maxAge: 7 * 24 * 60 * 60,
         path: '/',
     });
+    setAccessCookie(c, accessToken);
 
     return c.json({ accessToken });
 });
@@ -215,10 +222,11 @@ auth.post('/logout', async (c) => {
         await db.delete(sessions).where(eq(sessions.refreshToken, refreshToken));
     }
 
-    // Clear cookie
+    // Clear cookies
     setCookie(c, 'refresh_token', '', { maxAge: 0, path: '/' });
+    setCookie(c, 'access_token', '', { maxAge: 0, path: '/' });
 
-    return c.json({ success: true });
+    return c.json({ success: true, redirectUrl: '/login' });
 });
 
 // Check auth status
@@ -259,7 +267,7 @@ auth.get('/sessions', async (c) => {
     const allSessions = await db.select().from(sessions);
 
     // 4. Map to response format
-    const sessionList = allSessions.map(s => ({
+    const sessionList = allSessions.map((s: typeof allSessions[number]) => ({
         id: s.id,
         deviceName: s.deviceName,
         createdAt: s.createdAt,

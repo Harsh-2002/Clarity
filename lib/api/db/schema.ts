@@ -60,6 +60,7 @@ export const providers = sqliteTable('providers', {
 // Sessions (for JWT refresh tokens)
 export const sessions = sqliteTable('sessions', {
     id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
     refreshToken: text('refresh_token').notNull(),
     deviceName: text('device_name'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -67,6 +68,7 @@ export const sessions = sqliteTable('sessions', {
 }, (table) => ({
     expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt),
 }));
+
 
 // Users (Single Admin usually, but extensible)
 export const users = sqliteTable('users', {

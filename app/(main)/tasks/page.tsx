@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
+import { getAccessToken } from "@/lib/storage"
 
 interface Task {
     id: string
@@ -34,7 +35,11 @@ export default function TasksPage() {
     // Load tasks from API
     const fetchTasks = async () => {
         try {
-            const res = await fetch("/api/tasks")
+            const token = getAccessToken()
+            const headers: Record<string, string> = {}
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
+            const res = await fetch("/api/tasks", { headers })
             if (res.ok) {
                 const data = await res.json()
                 setTasks(data)
@@ -69,9 +74,13 @@ export default function TasksPage() {
         setNewDueDate("")
 
         try {
+            const token = getAccessToken()
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
             const res = await fetch("/api/tasks", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify(task)
             })
             if (!res.ok) throw new Error()
@@ -88,9 +97,13 @@ export default function TasksPage() {
         setTasks(tasks.map(t => t.id === id ? { ...t, completed: !currentCompleted } : t))
 
         try {
+            const token = getAccessToken()
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
             await fetch("/api/tasks", {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify({ id, completed: !currentCompleted })
             })
         } catch (error) {
@@ -104,7 +117,11 @@ export default function TasksPage() {
         setTasks(tasks.filter(t => t.id !== id))
 
         try {
-            await fetch(`/api/tasks?id=${id}`, { method: "DELETE" })
+            const token = getAccessToken()
+            const headers: Record<string, string> = {}
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
+            await fetch(`/api/tasks?id=${id}`, { method: "DELETE", headers })
         } catch (error) {
             toast.error("Failed to delete task")
             fetchTasks()

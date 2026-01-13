@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowRight, FileText, CheckSquare, Smile, Meh, Frown, Spa
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { toast } from "sonner"
+import { getAccessToken } from "@/lib/storage"
 
 interface JournalEntry {
     id: string
@@ -51,7 +52,11 @@ export default function JournalPage() {
     // Fetch entries
     const fetchEntries = useCallback(async () => {
         try {
-            const res = await fetch("/api/journal?limit=50")
+            const token = getAccessToken()
+            const headers: Record<string, string> = {}
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
+            const res = await fetch("/api/journal?limit=50", { headers })
             if (res.ok) {
                 const data = await res.json()
                 setEntries(data)
@@ -88,9 +93,13 @@ export default function JournalPage() {
         setSelectedMood(null)
 
         try {
+            const token = getAccessToken()
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
             const res = await fetch("/api/journal", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify({
                     id,
                     content: entry.content,
@@ -115,7 +124,11 @@ export default function JournalPage() {
         setEntries(entries.filter(e => e.id !== id))
 
         try {
-            await fetch(`/api/journal?id=${id}`, { method: "DELETE" })
+            const token = getAccessToken()
+            const headers: Record<string, string> = {}
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
+            await fetch(`/api/journal?id=${id}`, { method: "DELETE", headers })
             toast.success("Entry deleted")
         } catch {
             setEntries(previousEntries)
@@ -126,9 +139,13 @@ export default function JournalPage() {
     // Convert entry
     const convertEntry = async (id: string, type: "task" | "note") => {
         try {
+            const token = getAccessToken()
+            const headers: Record<string, string> = { "Content-Type": "application/json" }
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
             const res = await fetch(`/api/journal/${id}/convert`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers,
                 body: JSON.stringify({ type }),
             })
             if (res.ok) {
@@ -207,8 +224,8 @@ export default function JournalPage() {
                                         key={mood.value}
                                         onClick={() => setSelectedMood(selectedMood === mood.value ? null : mood.value)}
                                         className={`p-2 rounded-full transition-all ${selectedMood === mood.value
-                                                ? "bg-primary/20 scale-110"
-                                                : "hover:bg-secondary"
+                                            ? "bg-primary/20 scale-110"
+                                            : "hover:bg-secondary"
                                             }`}
                                         title={mood.label}
                                     >

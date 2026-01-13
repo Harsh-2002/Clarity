@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Link2, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+// Import apiFetch from storage
+import { apiFetch } from "@/lib/storage"
+import { formatRelativeTime } from "@/lib/format-time"
+import { BookMarked, ArrowRight } from "lucide-react"
 
 interface Backlink {
     id: string
     title: string
-    updatedAt: string
+    updatedAt: number
 }
 
 interface BacklinksPanelProps {
@@ -22,55 +23,61 @@ export function BacklinksPanel({ noteId, className }: BacklinksPanelProps) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const fetchBacklinks = async () => {
+        let mounted = true
+
+        const loadBacklinks = async () => {
             try {
-                const res = await fetch(`/api/notes/${noteId}/backlinks`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setBacklinks(data.backlinks)
+                setLoading(true)
+
+                const data = await apiFetch<any>(`/notes/${noteId}/backlinks`)
+
+                if (mounted) {
+                    setBacklinks(data.backlinks || [])
                 }
-            } catch (error) {
-                console.error("Failed to fetch backlinks:", error)
+            } catch (err) {
+                console.error("Failed to load backlinks:", err)
             } finally {
-                setLoading(false)
+                if (mounted) setLoading(false)
             }
         }
 
         if (noteId) {
-            fetchBacklinks()
+            loadBacklinks()
+        }
+
+        return () => {
+            mounted = false
         }
     }, [noteId])
 
-    if (loading) return null
-    if (backlinks.length === 0) return null
+    if (loading) {
+        return <div className={cn("animate-pulse h-20 bg-secondary/20 rounded-xl", className)} />
+    }
+
+    if (backlinks.length === 0) {
+        return null
+    }
 
     return (
-        <div className={cn("mt-12 pt-8 border-t border-border", className)}>
-            <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                <Link2 className="w-4 h-4" />
-                <h3 className="text-sm font-medium">Linked to this note</h3>
-                <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                    {backlinks.length}
-                </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {backlinks.map((link) => (
-                    <Link
-                        key={link.id}
-                        href={`/notes?id=${link.id}`}
-                        className="group flex flex-col p-3 rounded-xl border border-border bg-secondary/20 hover:bg-secondary/40 hover:border-primary/20 transition-all"
+        <div className={cn("space-y-3", className)}>
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <ArrowRight className="w-4 h-4" />
+                Linked to this note
+            </h3>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {backlinks.map((note) => (
+                    <div
+                        key={note.id}
+                        className="p-3 rounded-xl border border-border/50 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group"
                     >
-                        <span className="text-sm font-medium truncate mb-1 group-hover:text-primary transition-colors">
-                            {link.title}
-                        </span>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>
-                                {new Date(link.updatedAt).toLocaleDateString()}
-                            </span>
-                            <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                            {note.title}
                         </div>
-                    </Link>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <BookMarked className="w-3 h-3" />
+                            {formatRelativeTime(note.updatedAt)}
+                        </div>
+                    </div>
                 ))}
             </div>
         </div>

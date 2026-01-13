@@ -1,5 +1,6 @@
 import type { Context, Next } from 'hono';
 import { jwtVerify } from 'jose';
+import { getCookie } from 'hono/cookie';
 
 // Get JWT secret as Uint8Array
 import { keystore } from '../lib/keystore';
@@ -18,12 +19,15 @@ export async function authMiddleware(c: Context, next: Next) {
 
     const authHeader = c.req.header('Authorization');
     const queryToken = c.req.query('token');
+    const cookieToken = getCookie(c, 'access_token');
 
     let token = '';
     if (authHeader?.startsWith('Bearer ')) {
         token = authHeader.slice(7);
     } else if (queryToken) {
         token = queryToken;
+    } else if (cookieToken) {
+        token = cookieToken;
     }
 
     if (!token) {

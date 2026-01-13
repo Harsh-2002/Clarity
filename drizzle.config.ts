@@ -5,6 +5,10 @@ export default {
     out: './drizzle/migrations',
     dialect: 'sqlite',
     dbCredentials: {
-        url: process.env.DATABASE_URL || 'file:./data/clarity.db',
+        url: process.env.DATABASE_PATH && process.env.DATABASE_PATH.startsWith('file:')
+            ? process.env.DATABASE_PATH
+            : process.env.DATABASE_PATH
+                ? `file:${process.env.DATABASE_PATH}`
+                : 'file:./data/clarity.db',
     },
 } satisfies Config

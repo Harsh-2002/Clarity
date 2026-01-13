@@ -3,61 +3,47 @@ import type { AppSettings, ProviderConfig, Transcript, FinetuneRequest, Session 
 // API Base URL - routes to Next.js API running on same origin
 const API_BASE = "/api/v1"
 
-// Token management
-let _accessToken: string | null = null
+// Token management (cookie-based auth)
+// Access/refresh tokens are stored as httpOnly cookies.
+// Keep these helpers for compatibility with older call sites.
 const TOKEN_KEY = "clarity_access_token"
 
-export function setAccessToken(token: string) {
-  _accessToken = token
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem(TOKEN_KEY, token)
-  }
+export function setAccessToken(_token: string) {
+  // No-op: access token is httpOnly; not available to JS.
+  clearAccessToken()
 }
 
 export function getAccessToken(): string | null {
-  if (_accessToken) return _accessToken
-  if (typeof window !== "undefined") {
-    return sessionStorage.getItem(TOKEN_KEY)
-  }
+  // httpOnly token is not readable from JS.
   return null
 }
 
 export function clearAccessToken() {
-  _accessToken = null
   if (typeof window !== "undefined") {
     sessionStorage.removeItem(TOKEN_KEY)
   }
 }
 
-async function getValidToken(): Promise<string | null> {
-  if (_accessToken) return _accessToken
-
-  if (typeof window !== "undefined") {
-    const stored = sessionStorage.getItem(TOKEN_KEY)
-    if (stored) {
-      _accessToken = stored
-      return stored
-    }
-  }
-
+async function refreshAccessToken(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, { method: "POST" })
-    if (res.ok) {
-      const data = await res.json()
-      setAccessToken(data.accessToken)
-      return data.accessToken
-    }
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+
+    if (!res.ok) return false
+
+    // Cookie is set server-side; response body can be ignored.
+    await res.json().catch(() => undefined)
+    return true
   } catch (e) {
     console.error("Token refresh failed", e)
+    return false
   }
-
-  return null
 }
 
-// Helper for authenticated fetch
+// Helper for authenticated fetch (cookie-based)
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  let token = await getValidToken()
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -67,25 +53,19 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     delete headers["Content-Type"]
   }
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
-  }
-
-  let res = await fetch(`${API_BASE}${path}`, {
+  const fetchOptions: RequestInit = {
     ...options,
     headers,
-  })
+    credentials: "include",
+  }
+
+  let res = await fetch(`${API_BASE}${path}`, fetchOptions)
 
   if (res.status === 401) {
-    // Token might be expired, try refresh
     clearAccessToken()
-    token = await getValidToken()
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`
-      res = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers,
-      })
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      res = await fetch(`${API_BASE}${path}`, fetchOptions)
     }
   }
 
@@ -314,6 +294,19 @@ export async function getSessions(): Promise<Session[]> {
 
 export async function revokeSession(id: string): Promise<void> {
   await apiFetch(`/auth/sessions/${id}`, { method: "DELETE" })
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" })
+  } catch {
+    // ignore
+  }
+
+  clearAccessToken()
+  if (typeof window !== "undefined") {
+    window.location.href = "/login"
+  }
 }
 
 // --- Data Management ---

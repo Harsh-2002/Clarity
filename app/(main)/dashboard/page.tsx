@@ -23,6 +23,7 @@ import { StatsCards, RecentNotesWidget, UpcomingTasksWidget, RecentTranscriptsWi
 import { ZenQuoteWidget } from "@/components/dashboard/zen-quote-widget"
 import { OnThisDayWidget } from "@/components/dashboard/on-this-day-widget"
 import { SortableWidget } from "@/components/dashboard/sortable-widget"
+import { getAccessToken } from "@/lib/storage"
 
 export default function DashboardPage() {
     const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0, journals: 0, bookmarks: 0 })
@@ -88,13 +89,17 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                const token = getAccessToken()
+                const headers: Record<string, string> = {}
+                if (token) headers["Authorization"] = `Bearer ${token}`
+
                 const [notesRes, tasksRes, transcriptsRes, canvasesRes, journalRes, bookmarksRes] = await Promise.all([
-                    fetch("/api/v1/notes"),
-                    fetch("/api/tasks"),
-                    fetch("/api/v1/transcripts"),
-                    fetch("/api/canvas"),
-                    fetch("/api/journal?limit=50"),
-                    fetch("/api/bookmarks")
+                    fetch("/api/v1/notes", { headers }),
+                    fetch("/api/tasks", { headers }),
+                    fetch("/api/v1/transcripts", { headers }),
+                    fetch("/api/canvas", { headers }),
+                    fetch("/api/journal?limit=50", { headers }),
+                    fetch("/api/bookmarks", { headers })
                 ])
 
                 if (notesRes.ok) {

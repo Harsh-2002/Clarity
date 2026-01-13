@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { RefreshCw, Database, Check } from "lucide-react"
+import { RefreshCw, Database, Check, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getSettings, exportAllData, getProvider, saveSettings } from "@/lib/storage"
+import { getSettings, exportAllData, getProvider, saveSettings, logout } from "@/lib/storage"
 import { fetchAvailableModels } from "@/lib/providers"
 import type { AppSettings, ProviderConfig } from "@/lib/types"
 import { SessionManager } from "@/components/settings/session-manager"
@@ -290,6 +290,29 @@ export default function SettingsPage() {
         {/* Session Management */}
         <section className="space-y-6">
           <SessionManager />
+        </section>
+
+        {/* Logout */}
+        <section className="space-y-4">
+          <div className="border-b border-border/40 pb-4">
+            <h2 className="text-xl font-light">Account</h2>
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-red-500/10">
+                <LogOut className="w-5 h-5 text-red-500 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="font-medium">Sign out</p>
+                <p className="text-sm text-muted-foreground">
+                  Log out of all sessions and clear local data
+                </p>
+              </div>
+            </div>
+            <Button onClick={logout} variant="destructive" className="px-6">
+              Sign Out
+            </Button>
+          </div>
         </section>
 
         {/* Data Size Indicator */}
