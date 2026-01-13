@@ -857,11 +857,16 @@ export default function NotesPageClient() {
                                         <span>{wordCount} words</span>
                                     </div>
                                     <Button
-                                        variant={selectedNote.isPublished ? "default" : "outline"}
+                                        variant="outline"
                                         size="sm"
-                                        className="gap-2 rounded-full print:hidden"
+                                        className={cn(
+                                            "gap-2 rounded-full print:hidden transition-all duration-300",
+                                            selectedNote.isPublished
+                                                ? "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30 hover:bg-red-500/15 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30"
+                                                : "hover:bg-primary/10"
+                                        )}
                                         onClick={() => togglePublish(selectedNote)}
-                                        title={selectedNote.isPublished ? "Unpublish note" : "Publish note"}
+                                        title={selectedNote.isPublished ? "Click to unpublish" : "Publish note"}
                                     >
                                         {selectedNote.isPublished ? (
                                             <>

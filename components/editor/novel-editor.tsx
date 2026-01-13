@@ -29,7 +29,6 @@ import {
     handleImageDrop,
     handleImagePaste,
     type ImageUploadOptions,
-    GlobalDragHandle,
     CodeBlockLowlight
 } from "novel"
 import { common, createLowlight } from "lowlight"
@@ -43,7 +42,7 @@ import { Typography } from "@tiptap/extension-typography"
 import { Youtube } from "@tiptap/extension-youtube"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { cn } from "@/lib/utils"
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
 import {
     Bold,
@@ -62,19 +61,11 @@ import {
     Image as ImageIcon,
     Youtube as YoutubeIcon,
     GitBranch,
-    Trash,
     type LucideIcon
 } from "lucide-react"
 import { Markdown } from "tiptap-markdown"
 import MermaidExtension from "./mermaid-extension"
 import { LinkExtension } from "./link-extension"
-import { Button } from "@/components/ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 interface NovelEditorProps {
     content: string
@@ -140,26 +131,6 @@ export default function NovelEditor({
     const [mounted, setMounted] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [editorInstance, setEditorInstance] = useState<any>(null)
-
-    const deleteNode = useCallback(() => {
-        if (!editorInstance) return;
-        const handle = document.getElementById('drag-handle-element');
-        if (!handle) return;
-        const rect = handle.getBoundingClientRect();
-        const coords = { left: rect.right + 10, top: rect.top + (rect.height / 2) };
-        const pos = editorInstance.view.posAtCoords(coords);
-
-        if (pos) {
-            editorInstance.chain().focus().setTextSelection(pos.pos).run();
-            // Get the node at the selection to delete it
-            const { $anchor } = editorInstance.state.selection;
-            const node = $anchor.parent;
-            if (node) {
-                editorInstance.chain().deleteNode(node.type.name).run();
-                toast.success("Block deleted");
-            }
-        }
-    }, [editorInstance])
 
     // Memoize slash commands to include the editor instance dependent commands like Image
     const suggestionItems = createSuggestionItems([
@@ -331,11 +302,6 @@ export default function NovelEditor({
             transformPastedText: true,
             transformCopiedText: true
         }),
-        GlobalDragHandle.configure({
-            dragHandleWidth: 20,
-            scrollTreshold: 100,
-            dragHandleSelector: "#drag-handle-element",
-        }),
         Table.configure({
             resizable: true,
             HTMLAttributes: {
@@ -422,22 +388,6 @@ export default function NovelEditor({
 
     return (
         <div className={cn("novel-editor-wrapper relative", className)}>
-            <div id="drag-handle-element" className="drag-handle">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="w-full h-full p-0 opacity-0 hover:opacity-100 cursor-grab active:cursor-grabbing">
-                            <span className="sr-only">Open menu</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={deleteNode} className="text-destructive focus:text-destructive">
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
             <input
                 type="file"
                 className="hidden"
