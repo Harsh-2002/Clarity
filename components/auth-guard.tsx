@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Loader2 } from "lucide-react"
-import { clearAccessToken } from "@/lib/storage"
+import { clearAccessToken, getSettings } from "@/lib/storage"
 import { handleDestination, resolveAppDestination } from "@/lib/client/auth-flow"
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -18,6 +18,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         setError(null)
         try {
             const destination = await resolveAppDestination()
+
+            // Load and apply accent color from settings
+            try {
+                const settings = await getSettings()
+                if (settings?.accentColor) {
+                    document.documentElement.style.setProperty("--primary", settings.accentColor)
+                    document.documentElement.style.setProperty("--ring", settings.accentColor)
+                }
+            } catch (e) {
+                // Ignore settings load errors
+            }
 
             // Allow staying on onboarding if that's the destination
             if (destination.path === "/onboarding" && pathname.startsWith("/onboarding")) {

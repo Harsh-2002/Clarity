@@ -17,6 +17,7 @@ import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 import { Typography } from "@tiptap/extension-typography"
 import { Underline } from "@tiptap/extension-underline"
+import Image from "@tiptap/extension-image"
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight"
 import { common, createLowlight } from "lowlight"
 import { toHtml } from "hast-util-to-html"
@@ -130,6 +131,11 @@ export function PublishedNoteContent({ note }: Props) {
                 Superscript,
                 Typography,
                 Underline,
+                Image.configure({
+                    HTMLAttributes: {
+                        class: "rounded-3xl border border-border my-6"
+                    }
+                }),
                 MermaidNode,
             ])
 

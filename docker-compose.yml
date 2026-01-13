@@ -11,9 +11,9 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_PATH=/app/data/clarity.db
+      - DATABASE_PATH=/data/clarity.db
     volumes:
-      - ./data:/app/data
+      - ./data:/data
     env_file:
       - .env
 

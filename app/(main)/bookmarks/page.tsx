@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Bookmark, Link2, Loader2 } from "lucide-react"
 import { BookmarkCard, BookmarkCardSkeleton } from "@/components/bookmarks/bookmark-card"
 import { AddBookmarkInput } from "@/components/bookmarks/add-bookmark-input"
+import { toast } from "sonner"
 
 interface BookmarkData {
     id: string
@@ -22,6 +23,9 @@ const fadeIn = {
     transition: { duration: 0.3 },
 }
 
+// URL validation regex
+const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
+
 export default function BookmarksPage() {
     const [bookmarks, setBookmarks] = useState<BookmarkData[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -30,6 +34,68 @@ export default function BookmarksPage() {
     useEffect(() => {
         fetchBookmarks()
     }, [])
+
+    // Handle direct paste anywhere on the page
+    const handlePaste = useCallback(async (e: ClipboardEvent) => {
+        // Don't intercept if user is focused on an input
+        const activeElement = document.activeElement
+        if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') {
+            return
+        }
+
+        const pastedText = e.clipboardData?.getData('text')?.trim()
+        if (!pastedText) return
+
+        // Check if it looks like a URL
+        let url = pastedText
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            // Check if it's a valid domain format before prepending https
+            if (urlRegex.test(url) || url.includes('.')) {
+                url = 'https://' + url
+            } else {
+                return // Not a URL, ignore
+            }
+        }
+
+        // Validate URL format
+        try {
+            new URL(url)
+        } catch {
+            return // Invalid URL
+        }
+
+        e.preventDefault()
+        setIsAdding(true)
+
+        try {
+            const res = await fetch('/api/bookmarks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+            })
+
+            const data = await res.json()
+
+            if (res.status === 409) {
+                toast.info("Bookmark already exists")
+                handleAddBookmark(data.bookmark)
+            } else if (res.ok) {
+                toast.success("Bookmark saved!")
+                handleAddBookmark(data)
+            } else {
+                throw new Error(data.error || 'Failed to save bookmark')
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to save bookmark")
+        } finally {
+            setIsAdding(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        document.addEventListener('paste', handlePaste)
+        return () => document.removeEventListener('paste', handlePaste)
+    }, [handlePaste])
 
     const fetchBookmarks = async () => {
         try {
