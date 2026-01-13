@@ -63,6 +63,12 @@ export default function SettingsPage() {
 
       try {
         const appSettings = await getSettings()
+
+        // Preserve local accent if API doesn't have it
+        if (!appSettings.accentColor && localAccent) {
+          appSettings.accentColor = localAccent
+        }
+
         setIsOnboarded(true)
         setSettings(appSettings)
         setSelectedTranscriptionModel(appSettings.selectedTranscriptionModel || "")
