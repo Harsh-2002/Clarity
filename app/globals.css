@@ -202,6 +202,164 @@ select:disabled {
   cursor: not-allowed;
 }
 
+/* ===== Code Syntax Highlighting (Lowlight/Highlight.js compatible) ===== */
+
+/* Light theme syntax highlighting */
+.hljs-comment,
+.hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #d73a49;
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-template-variable,
+.hljs-variable,
+.hljs-template-tag {
+  color: #032f62;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-link {
+  color: #005cc5;
+}
+
+.hljs-function .hljs-title,
+.hljs-title.function_,
+.hljs-attr,
+.hljs-attribute {
+  color: #6f42c1;
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+  color: #22863a;
+}
+
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: #6f42c1;
+}
+
+.hljs-tag {
+  color: #22863a;
+}
+
+.hljs-meta {
+  color: #6f42c1;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #005cc5;
+}
+
+.hljs-addition {
+  color: #22863a;
+  background-color: #f0fff4;
+}
+
+.hljs-deletion {
+  color: #b31d28;
+  background-color: #ffeef0;
+}
+
+/* Dark theme syntax highlighting */
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.dark .hljs-string,
+.dark .hljs-doctag,
+.dark .hljs-template-variable,
+.dark .hljs-variable,
+.dark .hljs-template-tag {
+  color: #a5d6ff;
+}
+
+.dark .hljs-number,
+.dark .hljs-literal,
+.dark .hljs-type,
+.dark .hljs-params,
+.dark .hljs-link {
+  color: #79c0ff;
+}
+
+.dark .hljs-function .hljs-title,
+.dark .hljs-title.function_,
+.dark .hljs-attr,
+.dark .hljs-attribute {
+  color: #d2a8ff;
+}
+
+.dark .hljs-built_in,
+.dark .hljs-builtin-name {
+  color: #7ee787;
+}
+
+.dark .hljs-name,
+.dark .hljs-selector-id,
+.dark .hljs-selector-class {
+  color: #d2a8ff;
+}
+
+.dark .hljs-tag {
+  color: #7ee787;
+}
+
+.dark .hljs-meta {
+  color: #d2a8ff;
+}
+
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+  color: #79c0ff;
+}
+
+.dark .hljs-addition {
+  color: #7ee787;
+  background-color: rgba(46, 160, 67, 0.15);
+}
+
+.dark .hljs-deletion {
+  color: #ffa198;
+  background-color: rgba(248, 81, 73, 0.15);
+}
+
+/* Code block language label */
+.ProseMirror pre::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ProseMirror pre {
+  position: relative;
+}
+
 /* ===== PDF Export / Print Styles ===== */
 @media print {
 
@@ -402,7 +560,7 @@ select:disabled {
 }
 
 .drag-handle {
-  position: fixed;
+  position: absolute;
   opacity: 1;
   transition: opacity 0.15s ease-in-out, background-color 0.15s ease;
   border-radius: 0.25rem;

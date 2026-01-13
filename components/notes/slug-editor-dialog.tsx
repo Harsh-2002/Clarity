@@ -128,8 +128,8 @@ export function SlugEditorDialog({
                     <div className="space-y-2">
                         <Label htmlFor="slug">URL Slug</Label>
                         <div className="flex items-center space-x-2">
-                            <div className="flex-1 flex items-center border rounded-md px-3 h-10 bg-secondary/20 text-muted-foreground text-sm overflow-hidden">
-                                <span className="whitespace-nowrap">/p/</span>
+                            <div className="flex-1 flex items-center border rounded-md px-3 h-10 text-muted-foreground text-sm overflow-hidden">
+                                <span className="whitespace-nowrap text-muted-foreground">/p/</span>
                                 <Input
                                     id="slug"
                                     value={slug}
@@ -137,32 +137,32 @@ export function SlugEditorDialog({
                                         setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
                                         setError("")
                                     }}
-                                    className="border-0 shadow-none focus-visible:ring-0 px-0 h-auto bg-transparent flex-1 text-foreground"
+                                    className="border-0 shadow-none focus-visible:ring-0 px-1 h-auto bg-transparent flex-1 text-foreground"
                                     placeholder="custom-slug"
                                 />
                             </div>
-                             <Button
-                                 variant="outline"
-                                 size="icon"
-                                 onClick={generateRandomSlug}
-                                 title="Generate random slug"
-                             >
-                                 <RefreshCw className="w-4 h-4" />
-                             </Button>
-                         </div>
-                         {error && <p className="text-sm text-destructive">{error}</p>}
-                         <p className="text-xs text-muted-foreground">
-                             Public link: {typeof window !== "undefined" ? window.location.host : ''}/p/{slug || '...'}
-                         </p>
-                     </div>
-                 </div>
- 
-                 <DialogFooter className="flex sm:justify-between flex-col sm:flex-row gap-2">
-                     {isPublished && (
-                         <Button variant="destructive" className="text-destructive hover:bg-destructive/10 border-destructive/20" onClick={handleUnpublish} disabled={loading}>
-                             Unpublish
-                         </Button>
-                     )}
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={generateRandomSlug}
+                                title="Generate random slug"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        <p className="text-xs text-muted-foreground">
+                            Public link: {typeof window !== "undefined" ? window.location.host : ''}/p/{slug || '...'}
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter className="flex sm:justify-between flex-col sm:flex-row gap-2">
+                    {isPublished && (
+                        <Button variant="destructive" className="text-destructive hover:bg-destructive/10 border-destructive/20" onClick={handleUnpublish} disabled={loading}>
+                            Unpublish
+                        </Button>
+                    )}
 
                     <div className="flex gap-2 justify-end flex-1">
                         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>

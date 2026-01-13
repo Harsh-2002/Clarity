@@ -312,8 +312,9 @@ notesRoutes.post('/:id/publish', async (c) => {
             viewCount: existing.viewCount || 0
         });
     } else {
-        // Default: Publish
-        const slug = customSlug || existing.publishedSlug || nanoid(10);
+        // Default: Publish - use title-based slug as default
+        const titleSlug = slugify(existing.title);
+        const slug = customSlug || existing.publishedSlug || (titleSlug.length >= 3 ? titleSlug : nanoid(10));
 
         await db.update(notes).set({
             isPublished: true,

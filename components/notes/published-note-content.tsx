@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react"
 import { generateHTML } from "@tiptap/html"
+import { Node } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import { Link as TiptapLink } from "@tiptap/extension-link"
 import Highlight from "@tiptap/extension-highlight"
@@ -16,6 +17,8 @@ import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
 import { Typography } from "@tiptap/extension-typography"
 import { Underline } from "@tiptap/extension-underline"
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight"
+import { common, createLowlight } from "lowlight"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -75,9 +78,37 @@ export function PublishedNoteContent({ note }: Props) {
     const htmlContent = useMemo(() => {
         try {
             const json = JSON.parse(note.content)
+            const lowlight = createLowlight(common)
+
+            // Simple Mermaid node for HTML generation (renders as code block placeholder)
+            const MermaidNode = Node.create({
+                name: "mermaid",
+                group: "block",
+                atom: true,
+                addAttributes() {
+                    return { content: { default: "" } }
+                },
+                parseHTML() {
+                    return [{ tag: 'div[data-type="mermaid"]' }]
+                },
+                renderHTML({ HTMLAttributes }) {
+                    const content = HTMLAttributes.content || ""
+                    return ["div", { class: "mermaid-diagram bg-muted rounded-2xl p-4 my-4 border border-border", "data-type": "mermaid" },
+                        ["pre", { class: "font-mono text-sm text-muted-foreground whitespace-pre-wrap" }, content || "Mermaid Diagram"]
+                    ]
+                }
+            })
+
             return generateHTML(json, [
                 StarterKit.configure({
                     heading: { levels: [1, 2, 3] },
+                    codeBlock: false, // Using CodeBlockLowlight instead
+                }),
+                CodeBlockLowlight.configure({
+                    lowlight,
+                    HTMLAttributes: {
+                        class: "bg-muted rounded-2xl p-4 font-mono text-sm overflow-x-auto"
+                    }
                 }),
                 TiptapLink.configure({
                     openOnClick: true,
@@ -97,6 +128,7 @@ export function PublishedNoteContent({ note }: Props) {
                 Superscript,
                 Typography,
                 Underline,
+                MermaidNode,
             ])
         } catch (e) {
             console.error("Failed to generate HTML from note content:", e)

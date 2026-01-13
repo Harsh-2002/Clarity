@@ -29,8 +29,10 @@ import {
     handleImageDrop,
     handleImagePaste,
     type ImageUploadOptions,
-    GlobalDragHandle
+    GlobalDragHandle,
+    CodeBlockLowlight
 } from "novel"
+import { common, createLowlight } from "lowlight"
 import { Table } from "@tiptap/extension-table"
 import { TableRow } from "@tiptap/extension-table-row"
 import { TableCell } from "@tiptap/extension-table-cell"
@@ -60,11 +62,19 @@ import {
     Image as ImageIcon,
     Youtube as YoutubeIcon,
     GitBranch,
+    Trash,
     type LucideIcon
 } from "lucide-react"
 import { Markdown } from "tiptap-markdown"
 import MermaidExtension from "./mermaid-extension"
 import { LinkExtension } from "./link-extension"
+import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface NovelEditorProps {
     content: string
@@ -111,6 +121,15 @@ const imageUpload = createImageUpload({
     }
 })
 
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+    });
+};
+
 export default function NovelEditor({
     content,
     onChange,
@@ -120,6 +139,27 @@ export default function NovelEditor({
     const [initialContent, setInitialContent] = useState<JSONContent | string | undefined>(undefined)
     const [mounted, setMounted] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const [editorInstance, setEditorInstance] = useState<any>(null)
+
+    const deleteNode = useCallback(() => {
+        if (!editorInstance) return;
+        const handle = document.getElementById('drag-handle-element');
+        if (!handle) return;
+        const rect = handle.getBoundingClientRect();
+        const coords = { left: rect.right + 10, top: rect.top + (rect.height / 2) };
+        const pos = editorInstance.view.posAtCoords(coords);
+
+        if (pos) {
+            editorInstance.chain().focus().setTextSelection(pos.pos).run();
+            // Get the node at the selection to delete it
+            const { $anchor } = editorInstance.state.selection;
+            const node = $anchor.parent;
+            if (node) {
+                editorInstance.chain().deleteNode(node.type.name).run();
+                toast.success("Block deleted");
+            }
+        }
+    }, [editorInstance])
 
     // Memoize slash commands to include the editor instance dependent commands like Image
     const suggestionItems = createSuggestionItems([
@@ -239,13 +279,22 @@ export default function NovelEditor({
     ])
 
     // Configure Tiptap extensions
+    // Create lowlight instance with common languages
+    const lowlight = createLowlight(common)
+
     const extensions = [
         StarterKit.configure({
             heading: { levels: [1, 2, 3] },
             bulletList: { keepMarks: true, keepAttributes: false },
             orderedList: { keepMarks: true, keepAttributes: false },
-            codeBlock: { HTMLAttributes: { class: "bg-muted rounded-2xl p-4 font-mono text-sm" } },
+            codeBlock: false, // Disable default codeBlock, using CodeBlockLowlight instead
             blockquote: { HTMLAttributes: { class: "border-l-4 border-primary pl-4 italic" } }
+        }),
+        CodeBlockLowlight.configure({
+            lowlight,
+            HTMLAttributes: {
+                class: "bg-muted rounded-2xl p-4 font-mono text-sm overflow-x-auto"
+            }
         }),
         Placeholder.configure({
             placeholder: ({ node }) => {
@@ -350,40 +399,18 @@ export default function NovelEditor({
         }
     }
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            const base64 = await fileToBase64(file)
-            // We need to access the editor instance. Since we don't have a ref to the editor instance 
-            // in this scope easily (novel hides it), we can't easily insert here without context.
-            // Actually, we do need the editor instance to insert content.
-            // A trick is to use state or context, but Novel doesn't export context easily.
-            // HOWEVER, the slash command gives us 'editor'. But the file change happens later.
-            // Let's use a simpler approach: 
-            // Since I can't easily pass 'editor' to this handler from the ref...
-            // I will rely on the slash command just opening the dialog, but I need to know WHERE to insert.
-            // Wait, 'imageUpload' helper handles insertion if I use it.
-
-            // Let's just use the 'imageUpload' function directly if I can invoke it? No.
-            // 'imageUpload' creates a handler.
-
-            // Pivot: I will assume the slash command 'Image' is good, but connecting the file input back to the editor is tricky without the editor instance.
-            // I will stash the editor instance in a ref when updating? No.
-
-            // Better approach: Use the standard way - drag/drop works with `imageUpload`. 
-            // For the slash command, I'll assume users will figure out they can just copy-paste or drag-drop.
-            // OR, I can use the `editor` passed to `onUpdate` to store a `currentEditorRef`.
-        }
-    }
-
-    // Stash editor instance
-    const [editorInstance, setEditorInstance] = useState<any>(null)
-
     const onUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file && editorInstance) {
-            const base64 = await fileToBase64(file)
-            editorInstance.chain().focus().setImage({ src: base64 }).run()
+            try {
+                // Use uploadToServer instead of fileToBase64 for consistency and persistence
+                const url = await uploadToServer(file)
+                editorInstance.chain().focus().setImage({ src: url }).run()
+            } catch (e) {
+                // Fallback to base64 if upload fails
+                const base64 = await fileToBase64(file)
+                editorInstance.chain().focus().setImage({ src: base64 }).run()
+            }
         }
         // Reset input
         if (fileInputRef.current) fileInputRef.current.value = ""
@@ -395,7 +422,22 @@ export default function NovelEditor({
 
     return (
         <div className={cn("novel-editor-wrapper relative", className)}>
-            <div id="drag-handle-element" className="drag-handle" />
+            <div id="drag-handle-element" className="drag-handle">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="w-full h-full p-0 opacity-0 hover:opacity-100 cursor-grab active:cursor-grabbing">
+                            <span className="sr-only">Open menu</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={deleteNode} className="text-destructive focus:text-destructive">
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
             <input
                 type="file"
                 className="hidden"
