@@ -56,7 +56,7 @@ export function OnThisDayWidget() {
             <div className="space-y-4 px-1">
                 {events.slice(0, 20).map((item, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-primary/20 pl-4 py-2 hover:bg-secondary/30 rounded-r-lg transition-colors">
-                        <div dangerouslySetInnerHTML={{ __html: item.html }} className="prose prose-sm dark:prose-invert text-muted-foreground [&>a]:text-primary [&>a]:no-underline [&>a]:hover:underline [&>a]:font-medium" />
+                        <div dangerouslySetInnerHTML={{ __html: item.html }} className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground [&>a]:text-primary [&>a]:no-underline [&>a]:hover:underline [&>a]:font-medium prose-p:bg-transparent prose-p:m-0" />
                     </div>
                 ))}
             </div>

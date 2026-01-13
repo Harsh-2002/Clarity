@@ -1,0 +1,1 @@
+ALTER TABLE `notes` ADD `view_count` integer DEFAULT 0;

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Mic, History, Settings, BookMarked, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen, Bookmark } from "lucide-react"
+import { Mic, History, Settings, StickyNote, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen, Bookmark } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileDrawer } from "@/components/mobile-drawer"
 
@@ -14,7 +14,7 @@ export function MinimalNav() {
     { href: "/journal", icon: BookOpen, label: "Journal" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
-    { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/notes", icon: StickyNote, label: "Notes" },
     { href: "/tasks", icon: ListTodo, label: "Tasks" },
     { href: "/kanban", icon: Columns3, label: "Kanban" },
     { href: "/calendar", icon: Calendar, label: "Calendar" },
@@ -76,7 +76,7 @@ export function MobileNav() {
     { href: "/journal", icon: BookOpen, label: "Journal" },
     { href: "/transcribe", icon: Mic, label: "Transcribe" },
     { href: "/transcripts", icon: History, label: "History" },
-    { href: "/notes", icon: BookMarked, label: "Notes" },
+    { href: "/notes", icon: StickyNote, label: "Notes" },
     { href: "/tasks", icon: ListTodo, label: "Tasks" },
     { href: "/kanban", icon: Columns3, label: "Kanban" },
     { href: "/calendar", icon: Calendar, label: "Calendar" },

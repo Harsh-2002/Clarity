@@ -7,6 +7,7 @@ export const notes = sqliteTable('notes', {
     content: text('content').notNull(), // JSON string (Tiptap)
     isPublished: integer('is_published', { mode: 'boolean' }).default(false),
     publishedSlug: text('published_slug').unique(),
+    viewCount: integer('view_count').default(0),
     version: integer('version').default(1),
     tags: text('tags'), // JSON array
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

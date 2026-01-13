@@ -12,11 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code, ListTodo, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code, ListTodo, ChevronDown, ChevronUp, Globe, GlobeOff, Eye, Link2, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import TodoList from "@/components/todo/todo-list"
 import { BacklinksPanel } from "@/components/editor/backlinks-panel"
+import { toast } from "sonner"
 
 const NovelEditor = dynamic(() => import("@/components/editor/novel-editor"), {
   ssr: false,
@@ -28,6 +29,9 @@ interface Note {
   id: string
   title: string
   content: string
+  isPublished?: boolean
+  publishedSlug?: string | null
+  viewCount?: number
   createdAt: number
   updatedAt: number
 }
@@ -60,6 +64,9 @@ export default function NotesPage() {
           id: n.id,
           title: n.title,
           content: n.content,
+          isPublished: n.isPublished,
+          publishedSlug: n.publishedSlug,
+          viewCount: n.viewCount || 0,
           createdAt: new Date(n.createdAt).getTime(),
           updatedAt: new Date(n.updatedAt).getTime()
         }))
@@ -144,6 +151,45 @@ export default function NotesPage() {
       console.error("Failed to create note:", err)
     }
   }, [])
+
+  // Toggle publish status
+  const togglePublish = async (note: Note) => {
+    try {
+      const res = await fetch(`/api/notes/${note.id}/publish`, { method: "POST" })
+      if (!res.ok) throw new Error("Failed to toggle publish")
+
+      const data = await res.json()
+
+      // Update local state
+      setNotes(prev => prev.map(n =>
+        n.id === note.id
+          ? { ...n, isPublished: data.isPublished, publishedSlug: data.slug, viewCount: data.viewCount }
+          : n
+      ))
+
+      if (selectedNote?.id === note.id) {
+        setSelectedNote(prev => prev ? { ...prev, isPublished: data.isPublished, publishedSlug: data.slug, viewCount: data.viewCount } : null)
+      }
+
+      if (data.isPublished) {
+        const url = `${window.location.origin}/p/${data.slug}`
+        await navigator.clipboard.writeText(url)
+        toast.success("Note published! Link copied to clipboard")
+      } else {
+        toast.success("Note unpublished")
+      }
+    } catch (err) {
+      toast.error("Failed to toggle publish status")
+      console.error(err)
+    }
+  }
+
+  const copyPublishLink = async (note: Note) => {
+    if (!note.publishedSlug) return
+    const url = `${window.location.origin}/p/${note.publishedSlug}`
+    await navigator.clipboard.writeText(url)
+    toast.success("Link copied to clipboard")
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -912,6 +958,51 @@ export default function NotesPage() {
                   <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full print:hidden">
                     <span>{wordCount} words</span>
                   </div>
+                  {/* Publish Button */}
+                  <Button
+                    variant={selectedNote.isPublished ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2 rounded-full print:hidden"
+                    onClick={() => togglePublish(selectedNote)}
+                    title={selectedNote.isPublished ? "Unpublish note" : "Publish note"}
+                  >
+                    {selectedNote.isPublished ? (
+                      <>
+                        <Globe className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Published</span>
+                      </>
+                    ) : (
+                      <>
+                        <GlobeOff className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Publish</span>
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Published Stats & Link */}
+                  {selectedNote.isPublished && (
+                    <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full print:hidden">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{selectedNote.viewCount || 0} views</span>
+                      <button
+                        onClick={() => copyPublishLink(selectedNote)}
+                        className="ml-1 p-1 hover:bg-green-500/20 rounded transition-colors"
+                        title="Copy public link"
+                      >
+                        <Link2 className="w-3 h-3" />
+                      </button>
+                      <a
+                        href={`/p/${selectedNote.publishedSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 hover:bg-green-500/20 rounded transition-colors"
+                        title="Open public page"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
                   {/* Export Options */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
