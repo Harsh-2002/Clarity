@@ -248,12 +248,16 @@ auth.get('/me', async (c) => {
 
 // List active sessions
 auth.get('/sessions', async (c) => {
-    // 1. Verify auth (same as /me)
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    // 1. Verify auth (Header OR Cookie)
+    let token = c.req.header('Authorization')?.slice(7);
+    if (!token) {
+        token = getCookie(c, 'access_token');
+    }
+
+    if (!token) {
         return c.json({ error: 'Unauthorized' }, 401);
     }
-    const token = authHeader.slice(7);
+
     try {
         await jwtVerify(token, getJwtSecret());
     } catch {
@@ -280,12 +284,16 @@ auth.get('/sessions', async (c) => {
 
 // Revoke a session
 auth.delete('/sessions/:id', async (c) => {
-    // 1. Verify auth
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    // 1. Verify auth (Header OR Cookie)
+    let token = c.req.header('Authorization')?.slice(7);
+    if (!token) {
+        token = getCookie(c, 'access_token');
+    }
+
+    if (!token) {
         return c.json({ error: 'Unauthorized' }, 401);
     }
-    const token = authHeader.slice(7);
+
     try {
         await jwtVerify(token, getJwtSecret());
     } catch {
