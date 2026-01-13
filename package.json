@@ -84,6 +84,7 @@
     "drizzle-orm": "^0.38.4",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.25.0",
+    "hast-util-to-html": "^9.0.5",
     "hono": "^4.11.3",
     "html2pdf.js": "^0.12.1",
     "input-otp": "1.4.1",

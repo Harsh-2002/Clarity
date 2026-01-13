@@ -19,6 +19,7 @@ import { Typography } from "@tiptap/extension-typography"
 import { Underline } from "@tiptap/extension-underline"
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight"
 import { common, createLowlight } from "lowlight"
+import { toHtml } from "hast-util-to-html"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -99,7 +100,8 @@ export function PublishedNoteContent({ note }: Props) {
                 }
             })
 
-            return generateHTML(json, [
+            // Generate base HTML
+            let html = generateHTML(json, [
                 StarterKit.configure({
                     heading: { levels: [1, 2, 3] },
                     codeBlock: false, // Using CodeBlockLowlight instead
@@ -130,6 +132,43 @@ export function PublishedNoteContent({ note }: Props) {
                 Underline,
                 MermaidNode,
             ])
+
+            // Post-process: Apply syntax highlighting to code blocks
+            // Find all code blocks and apply lowlight highlighting
+            const codeBlockRegex = /<pre[^>]*><code[^>]*(?:class="[^"]*language-(\w+)[^"]*")?[^>]*>([\s\S]*?)<\/code><\/pre>/gi
+            html = html.replace(codeBlockRegex, (match, language, code) => {
+                try {
+                    // Decode HTML entities
+                    const decodedCode = code
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&amp;/g, '&')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'")
+
+                    // Apply syntax highlighting
+                    let highlighted
+                    if (language && lowlight.registered(language)) {
+                        highlighted = lowlight.highlight(language, decodedCode)
+                    } else {
+                        // Auto-detect language
+                        highlighted = lowlight.highlightAuto(decodedCode)
+                    }
+
+                    // Convert lowlight tree to HTML
+                    const highlightedHtml = toHtml(highlighted)
+                    const langClass = language ? ` language-${language}` : ''
+                    return `<pre class="bg-muted rounded-2xl p-4 font-mono text-sm overflow-x-auto" data-language="${language || 'auto'}"><code class="hljs${langClass}">${highlightedHtml}</code></pre>`
+                } catch (e) {
+                    // If highlighting fails, return original
+                    return match
+                }
+            })
+
+            // Remove the first H1 from content since title is shown separately in the header
+            html = html.replace(/^(\s*)<h1[^>]*>.*?<\/h1>/i, '')
+
+            return html
         } catch (e) {
             console.error("Failed to generate HTML from note content:", e)
             // If content is plain text, return as-is
