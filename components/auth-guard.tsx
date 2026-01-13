@@ -19,14 +19,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         try {
             const destination = await resolveAppDestination()
 
-            // Allow staying on onboarding if that’s the destination
+            // Allow staying on onboarding if that's the destination
             if (destination.path === "/onboarding" && pathname.startsWith("/onboarding")) {
                 if (destination.clearToken) clearAccessToken()
                 return
             }
 
-            // Main area expects authenticated/onboarded users; any other destination should redirect
-            handleDestination(router, destination)
+            // If destination is setup, login, or onboarding - redirect there
+            if (["/setup", "/login", "/onboarding"].includes(destination.path)) {
+                handleDestination(router, destination)
+                return
+            }
+
+            // User is authenticated and onboarded - allow them to stay on their current page
+            // No redirect needed, just finish loading
         } catch (err) {
             console.error("Auth check failed", err)
             clearAccessToken()

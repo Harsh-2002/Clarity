@@ -25,7 +25,7 @@ export async function resolveAppDestination(): Promise<DestinationResult> {
 
     try {
       const settings = await getSettings()
-      const path = settings.onboardingComplete ? "/transcribe" : "/onboarding"
+      const path = settings.onboardingComplete ? "/dashboard" : "/onboarding"
       return { path, clearToken: false }
     } catch (e: any) {
       if (e?.message === "Unauthorized") {

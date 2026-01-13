@@ -8,7 +8,7 @@
     "build:static": "next build && next export",
     "dev": "next dev --port 3000 --hostname 0.0.0.0",
     "lint": "eslint . --ext .ts,.tsx",
-    "start": "next start",
+    "start": "node .next/standalone/server.js || node .next/standalone/Clarity/server.js",
     "preview": "pnpm build && npx serve out",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/api/db/migrate.ts",
@@ -107,6 +107,15 @@
     "tweetnacl": "1.0.3",
     "vaul": "^1.1.2",
     "zod": "3.25.76"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "sharp",
+      "core-js",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",

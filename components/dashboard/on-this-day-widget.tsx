@@ -34,12 +34,16 @@ export function OnThisDayWidget() {
                 const day = today.getDate()
 
                 const res = await fetch(`/api/external/zen/history?month=${month}&day=${day}`)
-                if (!res.ok) throw new Error("Failed to fetch history")
+                if (!res.ok) {
+                    console.error("Failed to fetch history:", res.status)
+                    return // Let loading finish, history stays null => shows "Unable to load"
+                }
 
                 const data = await res.json()
                 setHistory(data)
             } catch (error) {
-                console.error(error)
+                console.error("OnThisDayWidget error:", error)
+                // Silent fail - shows "Unable to load history" in UI
             } finally {
                 setLoading(false)
             }

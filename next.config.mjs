@@ -1,7 +1,18 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Standalone output for Docker optimization
   output: 'standalone',
+  // Prevent Next from guessing workspace root via lockfiles.
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

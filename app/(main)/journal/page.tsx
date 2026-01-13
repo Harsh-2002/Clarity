@@ -181,18 +181,15 @@ export default function JournalPage() {
     }
 
     return (
-        <div className="min-h-screen p-4 md:p-8 pb-24">
-            <div className="max-w-2xl mx-auto">
+        <div className="min-h-screen p-6 md:pl-24 pb-24">
+            <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-8"
                 >
-                    <div className="flex items-center gap-3 mb-2">
-                        <Calendar className="w-8 h-8 text-primary" />
-                        <h1 className="text-3xl font-bold">Daily Journal</h1>
-                    </div>
+                    <h1 className="text-3xl font-bold tracking-tight mb-1">Daily Journal</h1>
                     <p className="text-muted-foreground">
                         Capture your thoughts, ideas, and reflections
                     </p>

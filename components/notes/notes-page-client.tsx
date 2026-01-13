@@ -54,6 +54,7 @@ export default function NotesPageClient() {
     const [slugDialogOpen, setSlugDialogOpen] = useState(false)
     const [customSlug, setCustomSlug] = useState("")
     const [slugError, setSlugError] = useState("")
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     const loadNotes = useCallback(async () => {
         try {
@@ -562,9 +563,17 @@ export default function NotesPageClient() {
             updatedAt: Date.now(),
         }
 
-        const updatedNotes = notes.map((n) => (n.id === selectedNote.id ? updatedNote : n))
-        saveNotes(updatedNotes)
+        // Update local state immediately
+        setNotes(prev => prev.map((n) => (n.id === selectedNote.id ? updatedNote : n)))
         setSelectedNote(updatedNote)
+
+        // Debounced save to API (1 second after last keystroke)
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+        }
+        debounceTimerRef.current = setTimeout(() => {
+            saveNote(updatedNote)
+        }, 1000)
     }
 
     const handleImport = async (file: File) => {
