@@ -70,7 +70,7 @@ export default function LoginPage() {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="Username"
-                                className="h-12 bg-muted/20 border-transparent hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all text-center placeholder:text-muted-foreground/50 tracking-wide"
+                                className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all text-center placeholder:text-muted-foreground/50 tracking-wide"
                             />
                             <Input
                                 id="password"
@@ -79,7 +79,7 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Password"
-                                className="h-12 bg-muted/20 border-transparent hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all text-center placeholder:text-muted-foreground/50 tracking-wide"
+                                className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all text-center placeholder:text-muted-foreground/50 tracking-wide"
                             />
                         </div>
 

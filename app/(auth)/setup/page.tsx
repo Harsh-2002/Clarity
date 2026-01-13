@@ -104,7 +104,7 @@ export default function SetupPage() {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     placeholder="Username or Email"
-                                    className="h-12 bg-muted/20 border-transparent hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all placeholder:text-muted-foreground/50 tracking-wide text-center"
+                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center"
                                 />
                                 <div className="absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                     <Button
@@ -130,7 +130,7 @@ export default function SetupPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Secure Password"
-                                    className="h-12 bg-muted/20 border-transparent hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all placeholder:text-muted-foreground/50 tracking-wide text-center font-mono text-sm"
+                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center font-mono text-sm"
                                 />
                                 <div className="absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                     <Button

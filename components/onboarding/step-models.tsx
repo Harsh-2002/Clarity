@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { useOnboarding } from "./onboarding-context"
 import { motion } from "framer-motion"
-import { ArrowLeft, ArrowRight, Cpu } from "lucide-react"
+import { ArrowLeft, ArrowRight, Cpu, ChevronDown } from "lucide-react"
 
 export function StepModels() {
   const {
@@ -40,7 +40,8 @@ export function StepModels() {
               <select
                 value={transcriptionModel}
                 onChange={(e) => setTranscriptionModel(e.target.value)}
-                className="w-full h-14 px-6 appearance-none border-transparent rounded-full bg-muted/20 hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all text-center text-sm font-medium cursor-pointer"
+                className="w-full h-14 px-10 border border-border/60 dark:border-input rounded-full bg-background dark:bg-input/30 hover:bg-muted/20 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus:outline-none transition-all text-center text-sm font-medium cursor-pointer [&::-ms-expand]:hidden appearance-none"
+                style={{ backgroundImage: 'none' }}
               >
                 <option value="" disabled>Select a model</option>
                 {availableTranscriptionModels.length > 0 ? (
@@ -53,9 +54,7 @@ export function StepModels() {
                   <option disabled>No transcription models available</option>
                 )}
               </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                <Cpu className="w-4 h-4" />
-              </div>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
 
@@ -65,7 +64,8 @@ export function StepModels() {
               <select
                 value={finetuneModel}
                 onChange={(e) => setFinetuneModel(e.target.value)}
-                className="w-full h-14 px-6 appearance-none border-transparent rounded-full bg-muted/20 hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all text-center text-sm font-medium cursor-pointer"
+                className="w-full h-14 px-10 border border-border/60 dark:border-input rounded-full bg-background dark:bg-input/30 hover:bg-muted/20 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus:outline-none transition-all text-center text-sm font-medium cursor-pointer [&::-ms-expand]:hidden appearance-none"
+                style={{ backgroundImage: 'none' }}
               >
                 <option value="">Skip refinement</option>
                 {availableFinetuneModels.length > 0 ? (
@@ -78,9 +78,7 @@ export function StepModels() {
                   <option disabled>No fine-tuning models available</option>
                 )}
               </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                <span className="text-[10px]">▼</span>
-              </div>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
         </div>
@@ -97,3 +95,4 @@ export function StepModels() {
     </div>
   )
 }
+

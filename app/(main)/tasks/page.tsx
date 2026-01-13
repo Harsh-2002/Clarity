@@ -27,6 +27,7 @@ export default function TasksPage() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [newTask, setNewTask] = useState("")
     const [newPriority, setNewPriority] = useState<Task["priority"]>("medium")
+    const [newDueDate, setNewDueDate] = useState<string>("")
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -58,12 +59,14 @@ export default function TasksPage() {
             text: newTask.trim(),
             priority: newPriority,
             completed: false,
+            dueDate: newDueDate ? new Date(newDueDate).toISOString() : null,
             createdAt: new Date().toISOString()
         }
 
         // Optimistic update
         setTasks([task as any, ...tasks])
         setNewTask("")
+        setNewDueDate("")
 
         try {
             const res = await fetch("/api/tasks", {
@@ -220,6 +223,13 @@ export default function TasksPage() {
                                 </button>
                             ))}
                         </div>
+                        <input
+                            type="date"
+                            value={newDueDate}
+                            onChange={(e) => setNewDueDate(e.target.value)}
+                            className="h-10 px-3 rounded-full bg-secondary/50 border-0 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            title="Due date (optional)"
+                        />
                         <Button
                             onClick={addTask}
                             disabled={!newTask.trim() || submitting}

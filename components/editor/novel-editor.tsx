@@ -73,14 +73,23 @@ interface NovelEditorProps {
     editable?: boolean
 }
 
-// Image upload helper for browser-side storage (Base64)
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.readAsDataURL(file)
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = (error) => reject(error)
-    })
+// Image upload helper - uploads to server and returns URL
+const uploadToServer = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Upload failed');
+    }
+
+    const data = await res.json();
+    return data.url;
 }
 
 // Image upload config
@@ -97,8 +106,8 @@ const imageUpload = createImageUpload({
         return true
     },
     onUpload: (file) => {
-        // Return the Base64 string directly - stored in the doc
-        return fileToBase64(file)
+        // Upload to server and return the URL
+        return uploadToServer(file)
     }
 })
 

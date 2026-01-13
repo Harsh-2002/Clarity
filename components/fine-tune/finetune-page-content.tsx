@@ -142,7 +142,7 @@ export function FinetunedPageContent() {
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               placeholder="Add specific instructions for refinement (e.g., 'Make it more concise', 'Fix grammar only')..."
-              className="w-full px-4 py-3 border border-border rounded-2xl bg-transparent focus:border-foreground transition-colors outline-none min-h-[100px] resize-none text-base font-light placeholder:text-muted-foreground/50"
+              className="w-full px-4 py-3 border border-border/60 dark:border-input rounded-2xl bg-background dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] transition-all outline-none min-h-[100px] resize-none text-base font-light placeholder:text-muted-foreground/50"
             />
           </div>
 

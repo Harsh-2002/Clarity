@@ -34,9 +34,9 @@ export interface Canvas {
 }
 
 // Stats Component
-export function StatsCards({ stats }: { stats: { notes: number, pendingTasks: number, completedTasks: number } }) {
+export function StatsCards({ stats }: { stats: { notes: number, pendingTasks: number, completedTasks: number, journals?: number, bookmarks?: number } }) {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
                 <CardContent className="p-5 flex items-center justify-between">
                     <div>
@@ -62,11 +62,33 @@ export function StatsCards({ stats }: { stats: { notes: number, pendingTasks: nu
             <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
                 <CardContent className="p-5 flex items-center justify-between">
                     <div>
-                        <p className="text-sm text-muted-foreground">Completed</p>
+                        <p className="text-sm text-muted-foreground">Done</p>
                         <p className="text-3xl font-bold">{stats.completedTasks}</p>
                     </div>
                     <div className="w-11 h-11 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
                         <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                <CardContent className="p-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-muted-foreground">Journal</p>
+                        <p className="text-3xl font-bold">{stats.journals ?? 0}</p>
+                    </div>
+                    <div className="w-11 h-11 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Calendar className="w-5 h-5" />
+                    </div>
+                </CardContent>
+            </Card>
+            <Card className="rounded-2xl border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                <CardContent className="p-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm text-muted-foreground">Bookmarks</p>
+                        <p className="text-3xl font-bold">{stats.bookmarks ?? 0}</p>
+                    </div>
+                    <div className="w-11 h-11 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <FileText className="w-5 h-5" />
                     </div>
                 </CardContent>
             </Card>

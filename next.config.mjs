@@ -10,7 +10,15 @@ const nextConfig = {
   },
   // Externalize native modules so they can be managed by DockerOS or rebuilt
   serverExternalPackages: ['better-sqlite3'],
-
+  // Serve uploaded files
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
+  },
 }
 
 export default nextConfig

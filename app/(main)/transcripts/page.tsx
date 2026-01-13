@@ -141,7 +141,7 @@ export default function TranscriptsPage() {
             placeholder="Search transcripts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-secondary/50 border-transparent focus:bg-background transition-all"
+            className="bg-secondary/50 dark:bg-input/30 border-border/60 dark:border-input focus:bg-background transition-all"
           />
 
           {/* Tag Filter */}

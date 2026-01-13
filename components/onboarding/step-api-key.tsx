@@ -121,7 +121,7 @@ export function StepApiKey() {
                 setApiKey(e.target.value)
                 setError(null)
               }}
-              className={`h-14 rounded-full bg-muted/20 border-transparent hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all placeholder:text-muted-foreground/50 tracking-wide text-center pr-16 ${error ? "border-destructive/50" : ""}`}
+              className={`h-14 rounded-full border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center pr-16 ${error ? "border-destructive/50" : ""}`}
             />
             <button
               type="button"

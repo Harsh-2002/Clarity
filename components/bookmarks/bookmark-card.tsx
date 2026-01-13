@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { ExternalLink, X, Globe } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -59,14 +60,13 @@ export function BookmarkCard({ bookmark, onDelete }: BookmarkCardProps) {
             >
                 {/* Cover Image */}
                 {bookmark.image ? (
-                    <div className="aspect-video w-full overflow-hidden bg-secondary">
-                        <img
+                    <div className="aspect-video w-full overflow-hidden bg-secondary relative">
+                        <Image
                             src={bookmark.image}
                             alt={bookmark.title || 'Bookmark'}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none'
-                            }}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            unoptimized
                         />
                     </div>
                 ) : (
@@ -92,13 +92,13 @@ export function BookmarkCard({ bookmark, onDelete }: BookmarkCardProps) {
                     {/* Footer: Favicon + Domain */}
                     <div className="flex items-center gap-2 pt-2">
                         {bookmark.favicon && (
-                            <img
+                            <Image
                                 src={bookmark.favicon}
                                 alt=""
-                                className="h-4 w-4 rounded-sm"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none'
-                                }}
+                                width={16}
+                                height={16}
+                                className="rounded-sm"
+                                unoptimized
                             />
                         )}
                         <span className="text-xs text-muted-foreground truncate flex items-center gap-1">

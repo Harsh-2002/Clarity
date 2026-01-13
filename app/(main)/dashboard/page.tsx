@@ -25,8 +25,9 @@ import { OnThisDayWidget } from "@/components/dashboard/on-this-day-widget"
 import { SortableWidget } from "@/components/dashboard/sortable-widget"
 
 export default function DashboardPage() {
-    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0 })
+    const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0, journals: 0, bookmarks: 0 })
     const [recentNotes, setRecentNotes] = useState<Note[]>([])
+    const [recentTasks, setRecentTasks] = useState<Task[]>([])
     const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
     const [recentTranscripts, setRecentTranscripts] = useState<Transcript[]>([])
     const [recentCanvases, setRecentCanvases] = useState<Canvas[]>([])
@@ -87,11 +88,13 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [notesRes, tasksRes, transcriptsRes, canvasesRes] = await Promise.all([
+                const [notesRes, tasksRes, transcriptsRes, canvasesRes, journalRes, bookmarksRes] = await Promise.all([
                     fetch("/api/v1/notes"),
                     fetch("/api/tasks"),
                     fetch("/api/v1/transcripts"),
-                    fetch("/api/canvas")
+                    fetch("/api/canvas"),
+                    fetch("/api/journal?limit=50"),
+                    fetch("/api/bookmarks")
                 ])
 
                 if (notesRes.ok) {
@@ -111,6 +114,8 @@ export default function DashboardPage() {
                         .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
                         .slice(0, 5)
 
+                    // Recent tasks (regardless of due date)
+                    setRecentTasks(pending.slice(0, 5))
                     setUpcomingTasks(upcoming)
                     setStats(prev => ({ ...prev, pendingTasks: pending.length, completedTasks: completed.length }))
                 }
@@ -125,6 +130,16 @@ export default function DashboardPage() {
                     const canvases = await canvasesRes.json()
                     setRecentCanvases(canvases.slice(0, 3))
                     setStats(prev => ({ ...prev, canvases: canvases.length }))
+                }
+
+                if (journalRes.ok) {
+                    const journals = await journalRes.json()
+                    setStats(prev => ({ ...prev, journals: journals.length }))
+                }
+
+                if (bookmarksRes.ok) {
+                    const bookmarks = await bookmarksRes.json()
+                    setStats(prev => ({ ...prev, bookmarks: bookmarks.length }))
                 }
             } catch (error) {
                 console.error("Failed to load dashboard data", error)
