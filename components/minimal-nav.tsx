@@ -4,7 +4,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Mic, History, Settings, StickyNote, ListTodo, Columns3, Home, Calendar, PenTool, BookOpen, Bookmark } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { MobileDrawer } from "@/components/mobile-drawer"
+// import { MobileDrawer } from "@/components/mobile-drawer" // Deprecated
+import { CaptureSheet } from "@/components/capture-sheet"
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet"
 
 export function MinimalNav() {
   const pathname = usePathname()
@@ -71,19 +73,6 @@ export function MinimalNav() {
 export function MobileNav() {
   const pathname = usePathname()
 
-  const navItems = [
-    { href: "/dashboard", icon: Home, label: "Home" },
-    { href: "/journal", icon: BookOpen, label: "Journal" },
-    { href: "/transcribe", icon: Mic, label: "Transcribe" },
-    { href: "/transcripts", icon: History, label: "History" },
-    { href: "/notes", icon: StickyNote, label: "Notes" },
-    { href: "/tasks", icon: ListTodo, label: "Tasks" },
-    { href: "/kanban", icon: Columns3, label: "Kanban" },
-    { href: "/calendar", icon: Calendar, label: "Calendar" },
-    { href: "/canvas", icon: PenTool, label: "Canvas" },
-    { href: "/settings", icon: Settings, label: "Settings" },
-  ]
-
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     // Smooth scroll to top on navigation
     if (pathname !== href) {
@@ -92,57 +81,63 @@ export function MobileNav() {
   }
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden z-50">
-      <div className="flex items-center gap-2 p-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-xl">
-        {navItems.slice(0, 5).map((item) => {
-          if (item.label === "Transcribe") return null // removing transcribe to replace with Drawer if desired? No keep it.
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={(e) => handleNavClick(e, item.href)}
-              className={cn(
-                "p-3 rounded-full transition-all duration-300",
-                pathname === item.href
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "w-5 h-5 transition-transform duration-300",
-                  pathname === item.href && "scale-110"
-                )}
-                strokeWidth={pathname === item.href ? 2.5 : 2}
-              />
-              <span className="sr-only">{item.label}</span>
-            </Link>
-          )
-        })}
-        <MobileDrawer />
-        {navItems.slice(5).map((item) => (
+    <>
+      {/* Spacer to prevent content from being hidden behind nav */}
+      <div className="h-24 md:hidden" />
+
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden z-50 pb-safe">
+        {/* Glass Background */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-background/80 backdrop-blur-xl border-t border-border/50" />
+
+        <div className="relative flex items-center justify-between px-6 h-16 pointer-events-none">
+          {/* Left Items */}
           <Link
-            key={item.href}
-            href={item.href}
-            onClick={(e) => handleNavClick(e, item.href)}
+            href="/dashboard"
+            onClick={(e) => handleNavClick(e, "/dashboard")}
             className={cn(
-              "p-3 rounded-full transition-all duration-300",
-              pathname === item.href
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "text-muted-foreground hover:text-foreground"
+              "flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors pointer-events-auto",
+              pathname === "/dashboard" ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <item.icon
-              className={cn(
-                "w-5 h-5 transition-transform duration-300",
-                pathname === item.href && "scale-110"
-              )}
-              strokeWidth={pathname === item.href ? 2.5 : 2}
-            />
-            <span className="sr-only">{item.label}</span>
+            <Home className={cn("w-6 h-6 transition-transform", pathname === "/dashboard" && "scale-110")} strokeWidth={pathname === "/dashboard" ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Home</span>
           </Link>
-        ))}
-      </div>
-    </nav>
+
+          <Link
+            href="/notes"
+            onClick={(e) => handleNavClick(e, "/notes")}
+            className={cn(
+              "flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors pointer-events-auto",
+              pathname.startsWith("/notes") ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <StickyNote className={cn("w-6 h-6 transition-transform", pathname.startsWith("/notes") && "scale-110")} strokeWidth={pathname.startsWith("/notes") ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Notes</span>
+          </Link>
+
+          {/* Center Action Button */}
+          <div className="flex flex-col items-center justify-center w-16 h-full -mt-6 pointer-events-auto">
+            <CaptureSheet />
+          </div>
+
+          {/* Right Items */}
+          <Link
+            href="/tasks"
+            onClick={(e) => handleNavClick(e, "/tasks")}
+            className={cn(
+              "flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors pointer-events-auto",
+              pathname === "/tasks" ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <ListTodo className={cn("w-6 h-6 transition-transform", pathname === "/tasks" && "scale-110")} strokeWidth={pathname === "/tasks" ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Tasks</span>
+          </Link>
+
+          <div className="pointer-events-auto">
+            <MobileMenuSheet />
+          </div>
+        </div>
+      </nav>
+    </>
   )
 }

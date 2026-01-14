@@ -238,9 +238,17 @@ auth.get('/me', async (c) => {
 
     const token = authHeader.slice(7);
     try {
-        await jwtVerify(token, getJwtSecret());
-        // Could fetch user details if needed
-        return c.json({ authenticated: true, user: 'admin' });
+        const { payload } = await jwtVerify(token, getJwtSecret());
+        const userId = payload.sub;
+
+        if (userId) {
+            const user = await db.query.users.findFirst({
+                where: eq(users.id, userId),
+                columns: { username: true }
+            });
+            return c.json({ authenticated: true, username: user?.username || 'User' });
+        }
+        return c.json({ authenticated: true, username: 'User' });
     } catch {
         return c.json({ authenticated: false }, 401);
     }

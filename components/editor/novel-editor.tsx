@@ -66,6 +66,7 @@ import {
 import { Markdown } from "tiptap-markdown"
 import MermaidExtension from "./mermaid-extension"
 import { LinkExtension } from "./link-extension"
+import { MobileEditorToolbar } from "./mobile-editor-toolbar"
 
 interface NovelEditorProps {
     content: string
@@ -565,6 +566,11 @@ export default function NovelEditor({
                     </EditorBubble>
                 </EditorContent>
             </EditorRoot>
+
+            <MobileEditorToolbar
+                editor={editorInstance}
+                onImageUpload={() => fileInputRef.current?.click()}
+            />
         </div>
     )
 }

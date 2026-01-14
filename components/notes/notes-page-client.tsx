@@ -12,7 +12,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code, ListTodo, ChevronDown, ChevronUp, Globe, Eye, Link2, ExternalLink } from "lucide-react"
+import { Plus, Trash2, BookMarked, BookOpen, Pen, Search, Download, Copy, Check, MoreVertical, Upload, FileJson, Palette, Printer, Code, ListTodo, ChevronDown, ChevronUp, Globe, Eye, Link2, ExternalLink, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import TodoList from "@/components/todo/todo-list"
@@ -41,6 +41,7 @@ interface Note {
 type SortOption = "newest" | "oldest" | "title-asc" | "title-desc"
 
 export default function NotesPageClient() {
+    const [viewMode, setViewMode] = useState<"list" | "editor">("list")
     const [notes, setNotes] = useState<Note[]>([])
     const [selectedNote, setSelectedNote] = useState<Note | null>(null)
     const [content, setContent] = useState<string>("")
@@ -141,6 +142,7 @@ export default function NotesPageClient() {
         setNotes(prev => [newNote, ...prev])
         setSelectedNote(newNote)
         setContent(initialContent)
+        setViewMode("editor")
 
         // Persist to API
         try {
@@ -161,9 +163,7 @@ export default function NotesPageClient() {
 
     const togglePublish = async (note: Note) => {
         if (note.isPublished) {
-            if (confirm("Are you sure you want to unpublish this note?")) {
-                unpublishNote(note)
-            }
+            unpublishNote(note)
         } else {
             openSlugEditor()
         }
@@ -694,7 +694,10 @@ export default function NotesPageClient() {
                 </DialogContent>
             </Dialog>
 
-            <div className="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-border/50 flex flex-col bg-secondary/10 max-h-[35vh] md:max-h-full print:hidden">
+            <div className={cn(
+                "w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-border/50 flex flex-col bg-muted/30 md:bg-secondary/10 print:hidden",
+                viewMode === "list" ? "h-full" : "hidden md:flex h-full"
+            )}>
                 <div className="p-4 border-b border-border/50 space-y-3">
                     <div className="flex gap-2">
                         <Button onClick={createNewNote} className="flex-1" size="lg">
@@ -777,6 +780,7 @@ export default function NotesPageClient() {
                                 key={note.id}
                                 onClick={() => {
                                     setSelectedNote(note)
+                                    setViewMode("editor")
                                     try {
                                         setContent(note.content)
                                     } catch {
@@ -827,30 +831,35 @@ export default function NotesPageClient() {
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+            <div className={cn("flex-1 flex flex-col h-full overflow-hidden bg-background", viewMode === "editor" ? "flex" : "hidden md:flex")}>
                 {selectedNote ? (
                     <>
                         <div className="h-14 border-b border-border/50 bg-background/50 backdrop-blur-sm sticky top-0 z-10 print:hidden">
                             <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <h2 className="font-semibold text-sm md:text-lg truncate">
-                                        {selectedNote.title}
-                                    </h2>
-                                    {saveStatus !== "idle" && (
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                            {saveStatus === "saving" ? (
-                                                <>
-                                                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
-                                                    <span>Saving...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Check className="w-3.5 h-3.5 text-green-500" />
-                                                    <span className="text-green-600 dark:text-green-400">Saved</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <Button variant="ghost" size="icon" className="md:hidden mr-1 h-8 w-8" onClick={() => setViewMode("list")}>
+                                        <ArrowLeft className="w-4 h-4" />
+                                    </Button>
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <h2 className="font-semibold text-sm md:text-lg truncate">
+                                            {selectedNote.title}
+                                        </h2>
+                                        {saveStatus !== "idle" && (
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                {saveStatus === "saving" ? (
+                                                    <>
+                                                        <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                                                        <span>Saving...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Check className="w-3.5 h-3.5 text-green-500" />
+                                                        <span className="text-green-600 dark:text-green-400">Saved</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                     <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-secondary/50 rounded-full print:hidden">

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowRight, BookMarked, Calendar, FileText, ListTodo, Mic, PenTool, Plus, Clock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 // Types
 export interface Task {
@@ -101,31 +102,34 @@ export function RecentNotesWidget({ notes }: { notes: Note[] }) {
     return (
         <div className="space-y-3 h-full">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-                <BookMarked className="w-4 h-4 text-blue-500" />
+                <FileText className="w-4 h-4 text-blue-500" />
                 Recent Notes
             </h2>
-            <div className="space-y-2">
+            <div className={cn(
+                "space-y-2", // Desktop vertical spacing
+                "flex md:block overflow-x-auto md:overflow-visible gap-3 md:gap-0 pb-4 md:pb-0 pl-4 md:pl-0 -mr-4 md:mr-0 pr-4 md:pr-0 scrollbar-hide snap-x md:snap-none" // Mobile horizontal scroll with left padding
+            )}>
                 {notes.length > 0 ? (
                     notes.map((note) => (
-                        <Link key={note.id} href={`/notes?id=${note.id}`}>
-                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground/50 group-hover:text-primary transition-colors">
+                        <Link key={note.id} href={`/notes?id=${note.id}`} className="flex-none w-[280px] md:w-auto snap-center">
+                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer h-full">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 rounded-full bg-secondary flex-shrink-0 flex items-center justify-center text-foreground/50 group-hover:text-primary transition-colors">
                                         <BookMarked className="w-4 h-4" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium group-hover:text-primary transition-colors">{note.title || "Untitled"}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">{note.title || "Untitled"}</h3>
                                         <p className="text-xs text-muted-foreground">
                                             {new Date(note.updatedAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                             </div>
                         </Link>
                     ))
                 ) : (
-                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl w-full">
                         No notes yet
                     </div>
                 )}
@@ -142,28 +146,31 @@ export function UpcomingTasksWidget({ tasks }: { tasks: Task[] }) {
                 <Calendar className="w-4 h-4 text-yellow-500" />
                 Upcoming Tasks
             </h2>
-            <div className="space-y-2">
+            <div className={cn(
+                "space-y-2",
+                "flex md:block overflow-x-auto md:overflow-visible gap-3 md:gap-0 pb-4 md:pb-0 pl-4 md:pl-0 -mr-4 md:mr-0 pr-4 md:pr-0 scrollbar-hide snap-x md:snap-none"
+            )}>
                 {tasks.length > 0 ? (
                     tasks.map((task) => (
-                        <Link key={task.id} href="/tasks">
-                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                        <Link key={task.id} href="/tasks" className="flex-none w-[280px] md:w-auto snap-center">
+                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer h-full">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 rounded-full bg-yellow-500/10 flex-shrink-0 flex items-center justify-center text-yellow-500">
                                         <ListTodo className="w-4 h-4" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium group-hover:text-primary transition-colors">{task.text}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">{task.text}</h3>
                                         <p className="text-xs text-muted-foreground">
                                             Due: {new Date(task.dueDate!).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                             </div>
                         </Link>
                     ))
                 ) : (
-                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl w-full">
                         No upcoming tasks with due dates
                     </div>
                 )}
@@ -180,28 +187,31 @@ export function RecentTranscriptsWidget({ transcripts }: { transcripts: Transcri
                 <Mic className="w-4 h-4 text-purple-500" />
                 Recent Transcriptions
             </h2>
-            <div className="space-y-2">
+            <div className={cn(
+                "space-y-2",
+                "flex md:block overflow-x-auto md:overflow-visible gap-3 md:gap-0 pb-4 md:pb-0 pl-4 md:pl-0 -mr-4 md:mr-0 pr-4 md:pr-0 scrollbar-hide snap-x md:snap-none"
+            )}>
                 {transcripts.length > 0 ? (
                     transcripts.map((transcript) => (
-                        <Link key={transcript.id} href="/transcripts">
-                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Link key={transcript.id} href="/transcripts" className="flex-none w-[280px] md:w-auto snap-center">
+                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer h-full">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex-shrink-0 flex items-center justify-center text-purple-500">
                                         <FileText className="w-4 h-4" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium group-hover:text-primary transition-colors">{transcript.name || "Recording"}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">{transcript.name || "Recording"}</h3>
                                         <p className="text-xs text-muted-foreground">
                                             {new Date(transcript.createdAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                             </div>
                         </Link>
                     ))
                 ) : (
-                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl w-full">
                         No transcriptions yet
                     </div>
                 )}
@@ -218,28 +228,31 @@ export function RecentCanvasesWidget({ canvases }: { canvases: Canvas[] }) {
                 <PenTool className="w-4 h-4 text-orange-500" />
                 Recent Canvases
             </h2>
-            <div className="space-y-2">
+            <div className={cn(
+                "space-y-2",
+                "flex md:block overflow-x-auto md:overflow-visible gap-3 md:gap-0 pb-4 md:pb-0 pl-4 md:pl-0 -mr-4 md:mr-0 pr-4 md:pr-0 scrollbar-hide snap-x md:snap-none"
+            )}>
                 {canvases.length > 0 ? (
                     canvases.map((canvas) => (
-                        <Link key={canvas.id} href={`/canvas/${canvas.id}`}>
-                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <Link key={canvas.id} href={`/canvas/${canvas.id}`} className="flex-none w-[280px] md:w-auto snap-center">
+                            <div className="group p-4 rounded-xl border border-border/50 bg-background hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between cursor-pointer h-full">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 rounded-full bg-orange-500/10 flex-shrink-0 flex items-center justify-center text-orange-500">
                                         <PenTool className="w-4 h-4" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium group-hover:text-primary transition-colors">{canvas.name || "Untitled Canvas"}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">{canvas.name || "Untitled Canvas"}</h3>
                                         <p className="text-xs text-muted-foreground">
                                             {new Date(canvas.updatedAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                             </div>
                         </Link>
                     ))
                 ) : (
-                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                    <div className="p-6 text-center text-muted-foreground border border-dashed border-border/50 rounded-xl w-full">
                         No canvases yet
                     </div>
                 )}

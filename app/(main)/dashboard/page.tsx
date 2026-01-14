@@ -20,10 +20,12 @@ import {
 } from "@dnd-kit/sortable"
 
 import { StatsCards, RecentNotesWidget, UpcomingTasksWidget, RecentTranscriptsWidget, RecentCanvasesWidget, QuickActionsWidget, Task, Transcript, Note, Canvas } from "@/components/dashboard/dashboard-widgets"
+import { MobileStatsCarousel } from "@/components/dashboard/mobile-stats-carousel"
 import { ZenQuoteWidget } from "@/components/dashboard/zen-quote-widget"
 import { OnThisDayWidget } from "@/components/dashboard/on-this-day-widget"
 import { SortableWidget } from "@/components/dashboard/sortable-widget"
 import { getAccessToken } from "@/lib/storage"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
     const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0, journals: 0, bookmarks: 0 })
@@ -185,15 +187,15 @@ export default function DashboardPage() {
     if (!mounted) return null
 
     return (
-        <div className="min-h-screen p-6 md:pl-24">
-            <div className="max-w-5xl mx-auto space-y-8">
+        <div className="min-h-screen p-4 md:pl-24 pb-24 md:pb-6">
+            <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
                 {/* Header */}
-                <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-6">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-bold tracking-tight">{getGreeting()}</h1>
-                        <p className="text-muted-foreground text-lg">Here&apos;s what&apos;s happening today.</p>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{getGreeting()}</h1>
+                        <p className="text-muted-foreground text-base md:text-lg">Here&apos;s what&apos;s happening today.</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right hidden md:block">
                         <div className="text-4xl md:text-5xl font-light tracking-tight tabular-nums">{formatTime()}</div>
                         <div className="text-muted-foreground mt-1">{formatDate()}</div>
                     </div>
@@ -201,7 +203,12 @@ export default function DashboardPage() {
 
                 {/* Stats */}
                 <motion.div {...slideUp}>
-                    <StatsCards stats={stats} />
+                    <div className="hidden md:block">
+                        <StatsCards stats={stats} />
+                    </div>
+                    <div className="md:hidden">
+                        <MobileStatsCarousel stats={stats} />
+                    </div>
                 </motion.div>
 
                 {/* Main Content Grid */}
