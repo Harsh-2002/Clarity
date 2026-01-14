@@ -1,12 +1,9 @@
-version: '3.9'
-
 services:
   clarity:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: clarity
-    restart: always
     ports:
       - "3000:3000"
     environment:
@@ -14,8 +11,7 @@ services:
       - DATABASE_PATH=/data/clarity.db
     volumes:
       - clarity_data:/data
-    env_file:
-      - .env
+    restart: unless-stopped       
 
 volumes:
   clarity_data:
