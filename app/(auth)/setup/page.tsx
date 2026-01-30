@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, ArrowRight, RefreshCw, Copy, Check, Dices } from "lucide-react"
+import { Loader2, ArrowRight, RefreshCw, Copy, Check, Dices, Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { handleDestination, resolveAppDestination } from "@/lib/client/auth-flow
 export default function SetupPage() {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const [copied, setCopied] = useState("")
@@ -138,6 +139,7 @@ export default function SetupPage() {
                                         size="icon-sm"
                                         onClick={generateUsername}
                                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        aria-label="Generate random username"
                                         title="Generate Username"
                                     >
                                         <Dices className="h-4 w-4" />
@@ -149,21 +151,33 @@ export default function SetupPage() {
                             <div className="relative group">
                                 <Input
                                     id="password"
-                                    type="text"
+                                    type={showPassword ? "text" : "password"}
                                     required
                                     minLength={8}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Secure Password"
-                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center font-mono text-sm"
+                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center font-mono text-sm pr-28"
                                 />
                                 <div className="absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon-sm"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        title={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
                                         onClick={() => copyToClipboard(password, "password")}
                                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        aria-label="Copy password to clipboard"
                                         title="Copy Password"
                                         disabled={!password}
                                     >
@@ -175,6 +189,7 @@ export default function SetupPage() {
                                         size="icon-sm"
                                         onClick={generatePassword}
                                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        aria-label="Generate strong password"
                                         title="Generate Strong Password"
                                     >
                                         <RefreshCw className="h-4 w-4" />

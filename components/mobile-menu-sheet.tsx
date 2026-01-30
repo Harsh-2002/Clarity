@@ -105,7 +105,7 @@ export function MobileMenuSheet() {
                                         <span className="text-xs text-muted-foreground">Free Plan</span>
                                     </div>
                                 </div>
-                                <Button size="icon" variant="ghost" onClick={() => handleNavigate('/settings')}>
+                                <Button size="icon" variant="ghost" onClick={() => handleNavigate('/settings')} aria-label="Go to settings">
                                     <Settings className="w-5 h-5 text-muted-foreground" />
                                 </Button>
                             </div>

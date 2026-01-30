@@ -73,6 +73,8 @@ export function Sidebar() {
                     size="icon"
                     onClick={toggleCollapse}
                     className={cn("h-8 w-8", isCollapsed && "mx-auto")}
+                    aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </Button>
@@ -112,8 +114,11 @@ export function Sidebar() {
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                             )}
+                            aria-label="Settings"
+                            title="Settings"
                         >
                             <Settings className="w-4 h-4" />
+                            <span className="sr-only">Settings</span>
                         </Link>
                     </div>
                 ) : (

@@ -24,6 +24,7 @@ export function CaptureSheet() {
                         id="capture-hub-btn"
                         size="icon"
                         className="h-14 w-14 rounded-full shadow-xl bg-primary text-primary-foreground hover:scale-105 transition-transform border-4 border-background"
+                        aria-label="Open create menu"
                     >
                         <Plus className="w-7 h-7" />
                     </Button>

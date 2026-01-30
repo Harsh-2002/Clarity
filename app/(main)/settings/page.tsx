@@ -225,12 +225,14 @@ export default function SettingsPage() {
                       saveSettings(updated)
                     }
                   }}
-                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${(settings?.accentColor || "#2383e2") === color.value
+                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${(settings?.accentColor || "#2383e2") === color.value
                     ? "border-foreground scale-110"
                     : "border-transparent hover:scale-105"
                     }`}
                   style={{ backgroundColor: color.value }}
                   title={color.name}
+                  aria-label={`Select ${color.name} accent color`}
+                  aria-pressed={(settings?.accentColor || "#2383e2") === color.value}
                 >
                   {(settings?.accentColor || "#2383e2") === color.value && (
                     <Check className="w-4 h-4 text-white drop-shadow-md" />
@@ -287,7 +289,10 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => setAutoFineTune(!autoFineTune)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoFineTune ? "bg-primary" : "bg-secondary"
+                  role="switch"
+                  aria-checked={autoFineTune}
+                  aria-label="Auto fine-tune transcripts"
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${autoFineTune ? "bg-primary" : "bg-secondary"
                     }`}
                 >
                   <span

@@ -23,6 +23,7 @@ export function MobileDrawer() {
                     id="quick-create-btn"
                     size="icon"
                     className="h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:scale-105 transition-transform"
+                    aria-label="Quick create"
                 >
                     <Plus className="w-6 h-6" />
                 </Button>
