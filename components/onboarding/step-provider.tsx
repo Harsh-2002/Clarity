@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Check, ArrowRight, ArrowLeft } from "lucide-react"
 import Image from "next/image"
+import { StepProgress } from "./step-progress"
 
 export function StepProvider() {
   const { setStep, selectedProvider, setSelectedProvider } = useOnboarding()
@@ -27,6 +28,8 @@ export function StepProvider() {
         transition={{ duration: 0.6 }}
         className="max-w-md w-full space-y-8"
       >
+        <StepProgress />
+
         <div className="space-y-2 text-center">
           <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
             Choose Intelligence

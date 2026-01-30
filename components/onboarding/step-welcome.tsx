@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { useOnboarding } from "./onboarding-context"
 import { ArrowRight } from "lucide-react"
+import { StepProgress } from "./step-progress"
 
 export function StepWelcome() {
   const { setStep } = useOnboarding()
@@ -10,6 +11,8 @@ export function StepWelcome() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
       <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <StepProgress />
+
         <div className="space-y-4 text-center">
           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Clarity</h1>
           <p className="text-muted-foreground text-lg">

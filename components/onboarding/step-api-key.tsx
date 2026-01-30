@@ -9,6 +9,7 @@ import { saveProvider } from "@/lib/storage"
 import type { ProviderConfig } from "@/lib/types"
 import { motion } from "framer-motion"
 import { ArrowLeft, ArrowRight, Loader2, Key } from "lucide-react"
+import { StepProgress } from "./step-progress"
 
 export function StepApiKey() {
   const {
@@ -102,6 +103,8 @@ export function StepApiKey() {
         transition={{ duration: 0.6 }}
         className="max-w-md w-full space-y-8 text-center"
       >
+        <StepProgress />
+
         <div className="space-y-2">
           <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
             Connect {providerConfig?.name}

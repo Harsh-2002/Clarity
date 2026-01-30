@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { useOnboarding } from "./onboarding-context"
 import { motion } from "framer-motion"
 import { ArrowLeft, ArrowRight, Cpu, ChevronDown } from "lucide-react"
+import { StepProgress } from "./step-progress"
 
 export function StepModels() {
   const {
@@ -24,6 +25,8 @@ export function StepModels() {
         transition={{ duration: 0.6 }}
         className="max-w-md w-full space-y-8 text-center"
       >
+        <StepProgress />
+
         <div className="space-y-2">
           <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
             Model Configuration
