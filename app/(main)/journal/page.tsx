@@ -181,7 +181,7 @@ export default function JournalPage() {
     }
 
     return (
-        <div className="min-h-screen p-6 md:pl-24 pb-24">
+        <div className="min-h-screen p-6 md:pl-24 pb-24 pt-10 md:pt-20">
             <div className="max-w-3xl mx-auto">
                 {/* Header */}
                 <motion.div
@@ -189,8 +189,8 @@ export default function JournalPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-8"
                 >
-                    <h1 className="text-3xl font-bold tracking-tight mb-1">Daily Journal</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Daily Journal</h1>
+                    <p className="text-muted-foreground text-lg">
                         Capture your thoughts, ideas, and reflections
                     </p>
                 </motion.div>
@@ -201,47 +201,54 @@ export default function JournalPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    <Card className="p-4 mb-8 bg-card/50 backdrop-blur-sm border-primary/20">
-                        <div className="text-sm text-muted-foreground mb-3 italic">
-                            {dailyPrompt}
-                        </div>
-                        <textarea
-                            value={newEntry}
-                            onChange={(e) => setNewEntry(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="What's on your mind?"
-                            className="w-full min-h-[100px] p-3 bg-background/50 border border-border rounded-2xl resize-none outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
+                    <Card className="p-6 mb-12 bg-card/50 backdrop-blur-sm border-primary/10 shadow-sm hover:shadow-md transition-all duration-300 rounded-3xl overflow-hidden group focus-within:ring-2 focus-within:ring-primary/20 ring-offset-2 ring-offset-background">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-1 space-y-4">
+                                {dailyPrompt && (
+                                    <div className="text-sm font-medium text-muted-foreground/80 px-1">
+                                        {dailyPrompt}
+                                    </div>
+                                )}
+                                <textarea
+                                    value={newEntry}
+                                    onChange={(e) => setNewEntry(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Write something..."
+                                    className="w-full min-h-[120px] bg-transparent border-none p-0 text-lg md:text-xl placeholder:text-muted-foreground/40 text-foreground resize-none outline-none focus:ring-0 leading-relaxed"
+                                />
 
-                        {/* Mood Selector */}
-                        <div className="flex items-center justify-between mt-3">
-                            <div className="flex gap-2">
-                                {moodOptions.map((mood) => (
-                                    <button
-                                        key={mood.value}
-                                        onClick={() => setSelectedMood(selectedMood === mood.value ? null : mood.value)}
-                                        className={`p-2 rounded-full transition-all ${selectedMood === mood.value
-                                            ? "bg-primary/20 scale-110"
-                                            : "hover:bg-secondary"
-                                            }`}
-                                        title={mood.label}
-                                    >
-                                        <mood.icon className={`w-5 h-5 ${mood.color}`} />
-                                    </button>
-                                ))}
+                                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                                    <div className="flex gap-1">
+                                        {moodOptions.map((mood) => (
+                                            <button
+                                                key={mood.value}
+                                                onClick={() => setSelectedMood(selectedMood === mood.value ? null : mood.value)}
+                                                className={`p-2 rounded-xl transition-all duration-200 ${selectedMood === mood.value
+                                                    ? "bg-primary/10 text-primary scale-110"
+                                                    : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                                                    }`}
+                                                title={mood.label}
+                                            >
+                                                <mood.icon className={`w-5 h-5 ${selectedMood === mood.value ? mood.color : "currentColor"}`} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="hidden md:inline-block text-xs text-muted-foreground font-medium">
+                                            ⌘ + Enter
+                                        </span>
+                                        <Button
+                                            onClick={addEntry}
+                                            disabled={!newEntry.trim() || submitting}
+                                            className="rounded-full px-6 shadow-sm hover:shadow-md transition-all"
+                                        >
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Save
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
-                            <Button
-                                onClick={addEntry}
-                                disabled={!newEntry.trim() || submitting}
-                                className="rounded-full"
-                            >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Entry
-                            </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Press ⌘+Enter to save
-                        </p>
                     </Card>
                 </motion.div>
 
@@ -257,11 +264,11 @@ export default function JournalPage() {
                         className="text-center py-12 text-muted-foreground"
                     >
                         <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No journal entries yet.</p>
-                        <p className="text-sm">Start capturing your thoughts above!</p>
+                        <p className="text-lg font-medium mb-1">No journal entries yet</p>
+                        <p className="text-sm">Your personal timeline starts here.</p>
                     </motion.div>
                 ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-10">
                         <AnimatePresence>
                             {Object.entries(groupedEntries).map(([date, dateEntries]) => (
                                 <motion.div
@@ -269,85 +276,96 @@ export default function JournalPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
+                                    className="relative pl-4 md:pl-0"
                                 >
-                                    <h2 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">
-                                        {date}
-                                    </h2>
-                                    <div className="space-y-3">
+                                    <div className="sticky top-4 z-10 mb-6 flex items-center">
+                                        <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase bg-background/95 backdrop-blur-md px-4 py-1.5 rounded-full border border-border/40 shadow-sm">
+                                            {date}
+                                        </h2>
+                                    </div>
+
+                                    <div className="absolute left-0 top-12 bottom-0 w-px bg-border/40 hidden md:block" />
+
+                                    <div className="space-y-6 md:pl-8">
                                         {dateEntries.map((entry) => (
                                             <motion.div
                                                 key={entry.id}
-                                                initial={{ opacity: 0, x: -20 }}
+                                                layoutId={entry.id}
+                                                initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
-                                                className="group"
+                                                className="group relative"
                                             >
-                                                <Card className={`p-4 hover:shadow-md transition-all ${entry.convertedTo ? "opacity-60" : ""
-                                                    }`}>
-                                                    <div className="flex items-start gap-3">
-                                                        {/* Time */}
-                                                        <div className="text-xs text-muted-foreground min-w-[50px] pt-1">
-                                                            {new Date(entry.createdAt).toLocaleTimeString("en-US", {
-                                                                hour: "numeric",
-                                                                minute: "2-digit",
-                                                            })}
+                                                {/* Timeline Dot (Desktop) */}
+                                                <div className="absolute -left-[37px] top-6 w-2.5 h-2.5 rounded-full border-2 border-background bg-border hidden md:block group-hover:bg-primary group-hover:scale-125 transition-all duration-300 z-10" />
+
+                                                <Card className={`p-6 rounded-3xl border-border/40 bg-card/60 backdrop-blur-md hover:bg-card/80 hover:shadow-md transition-all duration-300 ${entry.convertedTo ? "opacity-70 grayscale-[0.5] hover:grayscale-0" : ""}`}>
+                                                    <div className="flex flex-col gap-3">
+                                                        {/* Metadata Header */}
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs font-medium text-muted-foreground/70 bg-secondary/50 px-2 py-0.5 rounded-md">
+                                                                    {new Date(entry.createdAt).toLocaleTimeString("en-US", {
+                                                                        hour: "numeric",
+                                                                        minute: "2-digit",
+                                                                    })}
+                                                                </span>
+                                                                {entry.mood && (() => {
+                                                                    const mood = moodOptions.find(m => m.value === entry.mood)
+                                                                    if (!mood) return null
+                                                                    return (
+                                                                        <div className="flex items-center gap-1.5" title={`Mood: ${mood.label}`}>
+                                                                            <mood.icon className={`w-4 h-4 ${mood.color}`} />
+                                                                        </div>
+                                                                    )
+                                                                })()}
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                                {!entry.convertedTo && (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => convertEntry(entry.id, "task")}
+                                                                            className="p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-lg transition-colors"
+                                                                            title="Convert to Task"
+                                                                        >
+                                                                            <CheckSquare className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => convertEntry(entry.id, "note")}
+                                                                            className="p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-lg transition-colors"
+                                                                            title="Convert to Note"
+                                                                        >
+                                                                            <FileText className="w-4 h-4" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => deleteEntry(entry.id)}
+                                                                    className="p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         </div>
 
                                                         {/* Content */}
-                                                        <div className="flex-1">
-                                                            <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
+                                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                                                                {entry.content}
+                                                            </p>
+                                                        </div>
 
-                                                            {/* Mood Badge */}
-                                                            {entry.mood && (
-                                                                <div className="mt-2">
-                                                                    {(() => {
-                                                                        const mood = moodOptions.find(m => m.value === entry.mood)
-                                                                        if (!mood) return null
-                                                                        return (
-                                                                            <span className={`inline-flex items-center gap-1 text-xs ${mood.color}`}>
-                                                                                <mood.icon className="w-3 h-3" />
-                                                                                {mood.label}
-                                                                            </span>
-                                                                        )
-                                                                    })()}
-                                                                </div>
-                                                            )}
-
-                                                            {/* Converted Badge */}
-                                                            {entry.convertedTo && (
-                                                                <div className="mt-2 text-xs text-muted-foreground">
+                                                        {/* Footer info */}
+                                                        {entry.convertedTo && (
+                                                            <div className="flex items-center gap-2 mt-1 pt-2 border-t border-border/30">
+                                                                <span className="text-[10px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded flex items-center gap-1">
+                                                                    <Sparkles className="w-3 h-3" />
                                                                     Converted to {entry.convertedTo.split(":")[0]}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Actions */}
-                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {!entry.convertedTo && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => convertEntry(entry.id, "task")}
-                                                                        className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
-                                                                        title="Convert to Task"
-                                                                    >
-                                                                        <CheckSquare className="w-4 h-4 text-muted-foreground" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => convertEntry(entry.id, "note")}
-                                                                        className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
-                                                                        title="Convert to Note"
-                                                                    >
-                                                                        <FileText className="w-4 h-4 text-muted-foreground" />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            <button
-                                                                onClick={() => deleteEntry(entry.id)}
-                                                                className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors"
-                                                                title="Delete"
-                                                            >
-                                                                <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                                                            </button>
-                                                        </div>
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </Card>
                                             </motion.div>

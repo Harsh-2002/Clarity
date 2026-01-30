@@ -18,7 +18,14 @@ const app = new Hono().basePath('/api/v1')
 import { keystore } from './lib/keystore';
 
 app.use('*', logger())
-app.use('*', cors())
+app.use('*', cors({
+    origin: (origin) => origin || '*',  // Echo back the request origin to support all origins with credentials
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposeHeaders: ['Content-Length', 'X-Request-Id'],
+    maxAge: 86400,
+    credentials: true
+}))
 
 // Initialize Keystore on startup (lazy load)
 if (process.env.NEXT_PHASE !== 'phase-production-build') {

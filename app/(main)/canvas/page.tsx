@@ -100,7 +100,7 @@ export default function CanvasListPage() {
     }
 
     return (
-        <div className="min-h-screen p-6 md:pl-24">
+        <div className="min-h-screen p-6 md:pl-24 pt-10 md:pt-20">
             <div className="max-w-6xl mx-auto space-y-8">
                 {/* Header */}
                 <motion.div {...fadeIn} className="flex items-center justify-between">

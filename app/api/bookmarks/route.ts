@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { db } from '@/lib/api/db/client';
 import { bookmarks } from '@/lib/api/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { verifyAuth, unauthorized } from '@/lib/api/middleware/nextjs-auth';
 
 // Fetch Open Graph metadata from a URL
 async function fetchMetadata(url: string) {
@@ -74,29 +75,74 @@ async function fetchMetadata(url: string) {
     }
 }
 
-// GET - List all bookmarks
-export async function GET() {
+// GET - List all bookmarks OR check URL status
+export async function GET(req: NextRequest) {
+    // Auth check
+    const userId = await verifyAuth(req);
+    if (!userId) {
+        return unauthorized();
+    }
+
+    // CORS headers for extension
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    };
+
     try {
+        const { searchParams } = new URL(req.url);
+        const url = searchParams.get('url');
+
+        // If URL param provided, check if bookmark exists
+        if (url) {
+            const existing = await db
+                .select()
+                .from(bookmarks)
+                .where(eq(bookmarks.url, url))
+                .limit(1);
+
+            if (existing.length > 0) {
+                return NextResponse.json({ exists: true, bookmark: existing[0] }, { headers });
+            } else {
+                return NextResponse.json({ exists: false }, { headers });
+            }
+        }
+
+        // Otherwise, list all bookmarks
         const allBookmarks = await db
             .select()
             .from(bookmarks)
             .orderBy(desc(bookmarks.createdAt));
 
-        return NextResponse.json(allBookmarks);
+        return NextResponse.json(allBookmarks, { headers });
     } catch (error) {
         console.error('Failed to fetch bookmarks:', error);
-        return NextResponse.json({ error: 'Failed to fetch bookmarks' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch bookmarks' }, { status: 500, headers });
     }
 }
 
 // POST - Create a new bookmark
 export async function POST(req: NextRequest) {
+    // Auth check
+    const userId = await verifyAuth(req);
+    if (!userId) {
+        return unauthorized();
+    }
+
+    // CORS headers
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    };
+
     try {
         const body = await req.json();
         const { url } = body;
 
         if (!url || typeof url !== 'string') {
-            return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+            return NextResponse.json({ error: 'URL is required' }, { status: 400, headers });
         }
 
         // Validate URL format
@@ -104,7 +150,7 @@ export async function POST(req: NextRequest) {
         try {
             parsedUrl = new URL(url);
         } catch {
-            return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+            return NextResponse.json({ error: 'Invalid URL format' }, { status: 400, headers });
         }
 
         // Check if bookmark already exists
@@ -115,7 +161,7 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
         if (existing.length > 0) {
-            return NextResponse.json({ error: 'Bookmark already exists', bookmark: existing[0] }, { status: 409 });
+            return NextResponse.json({ error: 'Bookmark already exists', bookmark: existing[0] }, { status: 409, headers });
         }
 
         // Fetch metadata
@@ -137,28 +183,59 @@ export async function POST(req: NextRequest) {
 
         await db.insert(bookmarks).values(newBookmark);
 
-        return NextResponse.json(newBookmark, { status: 201 });
+        return NextResponse.json(newBookmark, { status: 201, headers });
     } catch (error) {
         console.error('Failed to create bookmark:', error);
-        return NextResponse.json({ error: 'Failed to create bookmark' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create bookmark' }, { status: 500, headers });
     }
 }
 
-// DELETE - Remove a bookmark
+// DELETE - Remove a bookmark (by ID or URL)
 export async function DELETE(req: NextRequest) {
+    // Auth check
+    const userId = await verifyAuth(req);
+    if (!userId) {
+        return unauthorized();
+    }
+
+    // CORS headers
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    };
+
     try {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
+        const url = searchParams.get('url');
 
-        if (!id) {
-            return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+        if (!id && !url) {
+            return NextResponse.json({ error: 'ID or URL is required' }, { status: 400, headers });
         }
 
-        await db.delete(bookmarks).where(eq(bookmarks.id, id));
+        // Delete by URL if provided (for extension)
+        if (url) {
+            await db.delete(bookmarks).where(eq(bookmarks.url, url));
+        } else if (id) {
+            await db.delete(bookmarks).where(eq(bookmarks.id, id));
+        }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers });
     } catch (error) {
         console.error('Failed to delete bookmark:', error);
-        return NextResponse.json({ error: 'Failed to delete bookmark' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to delete bookmark' }, { status: 500, headers });
     }
+}
+
+// OPTIONS - Handle CORS preflight
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        },
+    });
 }

@@ -187,7 +187,7 @@ export default function DashboardPage() {
     if (!mounted) return null
 
     return (
-        <div className="min-h-screen p-4 md:pl-24 pb-24 md:pb-6">
+        <div className="min-h-screen p-4 md:pl-24 pb-24 md:pb-6 pt-10 md:pt-20">
             <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
                 {/* Header */}
                 <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-6">

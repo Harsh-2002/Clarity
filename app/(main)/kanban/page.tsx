@@ -196,11 +196,10 @@ export default function KanbanPage() {
     }
 
     return (
-        <div className="min-h-screen p-6 md:pl-24 bg-gradient-to-br from-background via-background to-secondary/20">
-            {/* Header */}
+        <div className="min-h-screen p-6 md:pl-24 pt-10 md:pt-20">
             <div className="mb-8 flex items-center justify-between">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent mb-2">
+                    <h1 className="text-4xl font-bold tracking-tight mb-2">
                         Kanban Board
                     </h1>
                     <p className="text-muted-foreground">

@@ -101,8 +101,8 @@ export function StatsCards({ stats }: { stats: { notes: number, pendingTasks: nu
 export function RecentNotesWidget({ notes }: { notes: Note[] }) {
     return (
         <div className="space-y-3 h-full">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-500" />
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-blue-500" />
                 Recent Notes
             </h2>
             <div className={cn(
@@ -142,8 +142,8 @@ export function RecentNotesWidget({ notes }: { notes: Note[] }) {
 export function UpcomingTasksWidget({ tasks }: { tasks: Task[] }) {
     return (
         <div className="space-y-3 h-full">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-yellow-500" />
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-yellow-500" />
                 Upcoming Tasks
             </h2>
             <div className={cn(
@@ -183,8 +183,8 @@ export function UpcomingTasksWidget({ tasks }: { tasks: Task[] }) {
 export function RecentTranscriptsWidget({ transcripts }: { transcripts: Transcript[] }) {
     return (
         <div className="space-y-3 h-full">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Mic className="w-4 h-4 text-purple-500" />
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+                <Mic className="w-5 h-5 text-purple-500" />
                 Recent Transcriptions
             </h2>
             <div className={cn(
@@ -224,8 +224,8 @@ export function RecentTranscriptsWidget({ transcripts }: { transcripts: Transcri
 export function RecentCanvasesWidget({ canvases }: { canvases: Canvas[] }) {
     return (
         <div className="space-y-3 h-full">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-                <PenTool className="w-4 h-4 text-orange-500" />
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+                <PenTool className="w-5 h-5 text-orange-500" />
                 Recent Canvases
             </h2>
             <div className={cn(
@@ -265,7 +265,7 @@ export function RecentCanvasesWidget({ canvases }: { canvases: Canvas[] }) {
 export function QuickActionsWidget() {
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Quick Actions</h2>
+            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 gap-3">
                 <Button variant="outline" className="h-auto py-3 px-6 justify-start rounded-full border-border/50 hover:bg-secondary/50 shadow-sm" asChild>
                     <Link href="/transcribe">

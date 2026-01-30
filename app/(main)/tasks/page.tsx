@@ -198,11 +198,11 @@ export default function TasksPage() {
     )
 
     return (
-        <div className="min-h-screen p-6 md:pl-24 bg-gradient-to-b from-background to-secondary/10">
+        <div className="min-h-screen p-6 md:pl-24 pt-10 md:pt-20">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="space-y-2">
-                    <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
                         Tasks
                     </h1>
                     <p className="text-lg text-muted-foreground">

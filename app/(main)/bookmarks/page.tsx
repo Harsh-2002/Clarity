@@ -126,7 +126,7 @@ export default function BookmarksPage() {
     }
 
     return (
-        <div className="min-h-screen p-6 md:pl-24">
+        <div className="min-h-screen p-6 md:pl-24 pt-10 md:pt-20">
             <div className="max-w-5xl mx-auto space-y-6">
                 {/* Header */}
                 <motion.div {...fadeIn} className="flex flex-col md:flex-row md:items-center justify-between gap-4">

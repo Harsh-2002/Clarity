@@ -169,10 +169,10 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-12">
+      <div className="max-w-3xl mx-auto px-4 pb-12 pt-10 md:pt-20 space-y-12">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-light tracking-tight">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">Manage your configuration</p>
         </div>
 
@@ -192,7 +192,7 @@ export default function SettingsPage() {
         {/* Provider Configuration */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-border/40 pb-4">
-            <h2 className="text-xl font-light">Provider Configuration</h2>
+            <h2 className="text-xl font-semibold">Provider Configuration</h2>
             <Button onClick={handleResetProvider} variant="ghost" className="text-muted-foreground hover:text-foreground">
               Reconfigure
             </Button>
@@ -323,7 +323,7 @@ export default function SettingsPage() {
         {/* Logout */}
         <section className="space-y-4">
           <div className="border-b border-border/40 pb-4">
-            <h2 className="text-xl font-light">Account</h2>
+            <h2 className="text-xl font-semibold">Account</h2>
           </div>
           <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border/40">
             <div className="flex items-center gap-3">
@@ -346,7 +346,7 @@ export default function SettingsPage() {
         {/* Data Size Indicator */}
         <section className="space-y-4">
           <div className="border-b border-border/40 pb-4">
-            <h2 className="text-xl font-light">Storage</h2>
+            <h2 className="text-xl font-semibold">Storage</h2>
           </div>
           <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 border border-border/40">
             <div className="flex items-center gap-3">

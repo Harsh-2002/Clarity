@@ -94,10 +94,10 @@ export default function TranscriptsPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-8">
+      <div className="max-w-3xl mx-auto px-4 pb-12 pt-10 md:pt-20 space-y-8">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-light tracking-tight">History</h1>
+            <h1 className="text-3xl font-bold tracking-tight">History</h1>
             <p className="text-muted-foreground">Your past transcriptions</p>
           </div>
 

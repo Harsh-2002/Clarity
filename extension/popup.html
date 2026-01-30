@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Setup screen (only shown when not logged in) -->
+    <div id="setupScreen" class="screen">
+        <div class="logo">
+            <img src="icons/icon-128.png" alt="Clarity" class="logo-image" />
+        </div>
+        <h1 class="setup-title">Clarity Bookmarks</h1>
+        <p class="setup-subtitle">Connect to your Clarity instance</p>
+
+        <form id="setupForm">
+            <div class="form-group">
+                <label for="setupBaseUrl">Instance URL</label>
+                <input type="url" id="setupBaseUrl" placeholder="https://clarity.example.com" required />
+            </div>
+            <div class="form-group">
+                <label for="setupUsername">Username</label>
+                <input type="text" id="setupUsername" autocomplete="username" required />
+            </div>
+            <div class="form-group">
+                <label for="setupPassword">Password</label>
+                <input type="password" id="setupPassword" autocomplete="current-password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Connect</button>
+            <div id="setupError" class="error-message hidden"></div>
+        </form>
+
+        <p class="setup-hint">
+            After connecting, click the extension icon to save any page.<br>
+            <kbd>Ctrl+Shift+B</kbd> for keyboard shortcut.
+        </p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

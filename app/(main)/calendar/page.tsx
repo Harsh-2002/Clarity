@@ -250,7 +250,7 @@ export default function CalendarPage() {
         : String(year)
 
     return (
-        <div className="min-h-screen p-6 md:pl-24">
+        <div className="min-h-screen p-6 md:pl-24 pt-10 md:pt-20">
             <div className="max-w-5xl mx-auto space-y-6">
                 {/* Header */}
                 <motion.div
@@ -325,7 +325,7 @@ export default function CalendarPage() {
                             transition={{ delay: 0.1 }}
                             className="space-y-4"
                         >
-                            <h2 className="text-lg font-semibold">
+                            <h2 className="text-xl font-semibold">
                                 {selectedDate
                                     ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
                                     : 'Select a date'

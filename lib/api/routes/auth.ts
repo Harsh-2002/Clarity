@@ -104,7 +104,7 @@ auth.post('/setup', async (c) => {
         });
         setAccessCookie(c, accessToken);
 
-        return c.json({ success: true, accessToken });
+        return c.json({ success: true, accessToken, refreshToken });
     } catch (err) {
         if (err instanceof z.ZodError) {
             return c.json({ error: 'Validation error', details: err.errors }, 400);
@@ -126,12 +126,14 @@ auth.post('/login', async (c) => {
         });
 
         if (!user) {
+            console.log(`Login failed: User '${username}' not found`);
             return c.json({ error: 'Invalid credentials' }, 401);
         }
 
         // Verify password
         const passwordValid = await bcrypt.compare(password, user.passwordHash);
         if (!passwordValid) {
+            console.log(`Login failed: Password mismatch for user '${username}'`);
             return c.json({ error: 'Invalid credentials' }, 401);
         }
 
@@ -160,7 +162,7 @@ auth.post('/login', async (c) => {
         });
         setAccessCookie(c, accessToken);
 
-        return c.json({ accessToken });
+        return c.json({ accessToken, refreshToken });
 
     } catch (err) {
         if (err instanceof z.ZodError) {
@@ -213,6 +215,39 @@ auth.post('/refresh', async (c) => {
     setAccessCookie(c, accessToken);
 
     return c.json({ accessToken });
+});
+
+// Refresh token endpoint (body-based for extensions)
+auth.post('/refresh-token', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { refreshToken } = body;
+
+        if (!refreshToken) {
+            return c.json({ error: 'Refresh token required' }, 400);
+        }
+
+        // Find session
+        const session = await db.query.sessions.findFirst({
+            where: eq(sessions.refreshToken, refreshToken),
+        });
+
+        if (!session) {
+            return c.json({ error: 'Invalid refresh token' }, 401);
+        }
+
+        // For permanent tokens, optionally check expiry (or remove expiry check)
+        // Since permanent, we skip expiry check per requirements
+
+        // Generate new access token
+        const accessToken = await generateAccessToken(session.userId);
+
+        return c.json({ accessToken });
+
+    } catch (err) {
+        console.error('Token refresh failed:', err);
+        return c.json({ error: 'Token refresh failed' }, 500);
+    }
 });
 
 // Logout endpoint
