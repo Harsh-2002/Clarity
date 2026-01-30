@@ -1,9 +1,16 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useOnboarding } from "./onboarding-context"
 import { motion } from "framer-motion"
-import { ArrowLeft, ArrowRight, Cpu, ChevronDown } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { StepProgress } from "./step-progress"
 
 export function StepModels() {
@@ -39,50 +46,43 @@ export function StepModels() {
         <div className="space-y-6">
           <div className="space-y-3">
             <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Transcription Engine</label>
-            <div className="relative">
-              <select
-                value={transcriptionModel}
-                onChange={(e) => setTranscriptionModel(e.target.value)}
-                className="w-full h-14 px-10 border border-border/60 dark:border-input rounded-full bg-background dark:bg-input/30 hover:bg-muted/20 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus:outline-none transition-all text-center text-sm font-medium cursor-pointer [&::-ms-expand]:hidden appearance-none"
-                style={{ backgroundImage: 'none' }}
-              >
-                <option value="" disabled>Select a model</option>
+            <Select value={transcriptionModel} onValueChange={setTranscriptionModel}>
+              <SelectTrigger className="w-full h-14 rounded-full">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
                 {availableTranscriptionModels.length > 0 ? (
                   availableTranscriptionModels.map((model) => (
-                    <option key={model} value={model}>
+                    <SelectItem key={model} value={model}>
                       {model}
-                    </option>
+                    </SelectItem>
                   ))
                 ) : (
-                  <option disabled>No transcription models available</option>
+                  <SelectItem value="" disabled>No transcription models available</SelectItem>
                 )}
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-3">
             <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Refinement Model (Optional)</label>
-            <div className="relative">
-              <select
-                value={finetuneModel}
-                onChange={(e) => setFinetuneModel(e.target.value)}
-                className="w-full h-14 px-10 border border-border/60 dark:border-input rounded-full bg-background dark:bg-input/30 hover:bg-muted/20 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus:outline-none transition-all text-center text-sm font-medium cursor-pointer [&::-ms-expand]:hidden appearance-none"
-                style={{ backgroundImage: 'none' }}
-              >
-                <option value="">Skip refinement</option>
+            <Select value={finetuneModel || "skip"} onValueChange={(value) => setFinetuneModel(value === "skip" ? "" : value)}>
+              <SelectTrigger className="w-full h-14 rounded-full">
+                <SelectValue placeholder="Skip refinement" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="skip">Skip refinement</SelectItem>
                 {availableFinetuneModels.length > 0 ? (
                   availableFinetuneModels.map((model) => (
-                    <option key={model} value={model}>
+                    <SelectItem key={model} value={model}>
                       {model}
-                    </option>
+                    </SelectItem>
                   ))
                 ) : (
-                  <option disabled>No fine-tuning models available</option>
+                  <SelectItem value="" disabled>No fine-tuning models available</SelectItem>
                 )}
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

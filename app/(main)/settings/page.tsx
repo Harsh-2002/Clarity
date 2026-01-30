@@ -4,6 +4,13 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { RefreshCw, Database, Check, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { getSettings, exportAllData, getProvider, saveSettings, logout } from "@/lib/storage"
 import { fetchAvailableModels } from "@/lib/providers"
 import type { AppSettings, ProviderConfig } from "@/lib/types"
@@ -247,36 +254,42 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Transcription Model</label>
-                  <select
+                  <Select
                     value={selectedTranscriptionModel}
-                    onChange={(e) => setSelectedTranscriptionModel(e.target.value)}
-                    className="w-full px-4 pr-12 py-2 border border-border rounded-full bg-background focus:border-foreground transition-colors outline-none cursor-pointer"
+                    onValueChange={setSelectedTranscriptionModel}
                     disabled={isFetchingModels}
                   >
-                    <option value="">Select model</option>
-                    {availableTranscriptionModels.map((model) => (
-                      <option key={model} value={model}>
-                        {model}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full rounded-full">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTranscriptionModels.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Fine-tuning Model</label>
-                  <select
+                  <Select
                     value={selectedFinetuneModel}
-                    onChange={(e) => setSelectedFinetuneModel(e.target.value)}
-                    className="w-full px-4 pr-12 py-2 border border-border rounded-full bg-background focus:border-foreground transition-colors outline-none cursor-pointer"
+                    onValueChange={setSelectedFinetuneModel}
                     disabled={isFetchingModels}
                   >
-                    <option value="">Select model</option>
-                    {availableFinetuneModels.map((model) => (
-                      <option key={model} value={model}>
-                        {model}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full rounded-full">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableFinetuneModels.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
