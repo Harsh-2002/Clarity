@@ -53,6 +53,24 @@ a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 
+/* Skip link (accessibility / SEO) */
+.skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    z-index: 10000;
+    transition: top 0.2s;
+}
+.skip-link:focus {
+    top: 16px;
+}
+
 /* ============================================
    GRAIN OVERLAY
    ============================================ */
