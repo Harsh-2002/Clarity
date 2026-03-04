@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { useOnboarding } from "./onboarding-context"
 import { ArrowRight } from "lucide-react"
+import { motion } from "framer-motion"
 import { StepProgress } from "./step-progress"
 
 export function StepWelcome() {
@@ -10,12 +11,17 @@ export function StepWelcome() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
-      <div className="max-w-md w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
+        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="max-w-md w-full space-y-8"
+      >
         <StepProgress />
 
-        <div className="space-y-4 text-center">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Clarity</h1>
-          <p className="text-muted-foreground text-lg">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">Clarity</h1>
+          <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">
             Your personal AI audio workspace
           </p>
         </div>
@@ -42,7 +48,7 @@ export function StepWelcome() {
             Configure AI <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

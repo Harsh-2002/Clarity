@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Trash2, Calendar, Flag, CheckCircle2, Circle, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
-import { getAccessToken } from "@/lib/storage"
+import { useSyncedQuery } from "@/lib/sync/hooks"
+import { getLocalDb, type LocalTask } from "@/lib/sync/db"
+import { createLocalTask, updateLocalTask, deleteLocalTask } from "@/lib/sync/local-mutations"
 
 interface Task {
     id: string
@@ -29,31 +31,28 @@ export default function TasksPage() {
     const [newTask, setNewTask] = useState("")
     const [newPriority, setNewPriority] = useState<Task["priority"]>("medium")
     const [newDueDate, setNewDueDate] = useState<string>("")
-    const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
-    // Load tasks from API
-    const fetchTasks = async () => {
-        try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = {}
-            if (token) headers["Authorization"] = `Bearer ${token}`
+    // Load tasks from API or IndexedDB
+    const localFetchTasks = useCallback(async () => {
+        const db = getLocalDb()
+        const all = await db.tasks.toArray()
+        return all.filter(t => !t.deletedAt).sort((a, b) => b.createdAt - a.createdAt) as any as Task[]
+    }, [])
 
-            const res = await fetch("/api/tasks", { headers })
-            if (res.ok) {
-                const data = await res.json()
-                setTasks(data)
-            }
-        } catch (error) {
-            toast.error("Failed to load tasks")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const networkFetchTasks = useCallback(async () => {
+        const res = await fetch("/api/tasks", { credentials: "include" })
+        if (!res.ok) throw new Error("Failed to load tasks")
+        return await res.json() as Task[]
+    }, [])
+
+    const { data: fetchedTasks, loading, refetch: fetchTasks } = useSyncedQuery(
+        localFetchTasks, networkFetchTasks, []
+    )
 
     useEffect(() => {
-        fetchTasks()
-    }, [])
+        if (fetchedTasks) setTasks(fetchedTasks)
+    }, [fetchedTasks])
 
     const addTask = async () => {
         if (!newTask.trim()) return
@@ -74,13 +73,10 @@ export default function TasksPage() {
         setNewDueDate("")
 
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = { "Content-Type": "application/json" }
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
             const res = await fetch("/api/tasks", {
                 method: "POST",
-                headers,
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(task)
             })
             if (!res.ok) throw new Error()
@@ -97,13 +93,10 @@ export default function TasksPage() {
         setTasks(tasks.map(t => t.id === id ? { ...t, completed: !currentCompleted } : t))
 
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = { "Content-Type": "application/json" }
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
             await fetch("/api/tasks", {
                 method: "PUT",
-                headers,
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id, completed: !currentCompleted })
             })
         } catch (error) {
@@ -117,11 +110,7 @@ export default function TasksPage() {
         setTasks(tasks.filter(t => t.id !== id))
 
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = {}
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
-            await fetch(`/api/tasks?id=${id}`, { method: "DELETE", headers })
+            await fetch(`/api/tasks?id=${id}`, { method: "DELETE", credentials: "include" })
         } catch (error) {
             toast.error("Failed to delete task")
             fetchTasks()

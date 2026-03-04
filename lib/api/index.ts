@@ -47,7 +47,6 @@ app.route('/settings', settingsRoutes)
 app.route('/providers', providersRoutes)
 app.route('/storage', storageRoutes)
 app.route('/sync', syncRoutes)
-app.route('/sync', syncRoutes)
 app.route('/public', publicRoutes)
 app.route('/ai', aiRoutes)
 

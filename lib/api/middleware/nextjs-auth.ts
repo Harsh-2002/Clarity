@@ -3,14 +3,19 @@ import { jwtVerify } from 'jose';
 import { db } from '@/lib/api/db/client';
 
 /**
- * Get JWT secret from database
+ * Get JWT secret from database (cached in memory after first load)
  */
+let _cachedJwtSecret: Uint8Array | null = null;
+
 async function getJwtSecret(): Promise<Uint8Array> {
+    if (_cachedJwtSecret) return _cachedJwtSecret;
+
     const config = await db.query.systemConfig.findFirst();
     if (!config?.jwtSecret) {
         throw new Error('JWT secret not configured');
     }
-    return new TextEncoder().encode(config.jwtSecret);
+    _cachedJwtSecret = new TextEncoder().encode(config.jwtSecret);
+    return _cachedJwtSecret;
 }
 
 /**

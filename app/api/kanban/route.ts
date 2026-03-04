@@ -1,9 +1,10 @@
 import { db } from "@/lib/api/db/client"
 import { kanbanColumns, kanbanCards } from "@/lib/api/db/schema"
-import { eq, asc } from "drizzle-orm"
+import { eq, asc, isNull } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+import { writeSyncLog } from "@/lib/api/db/sync-helpers"
 
 // Validation schemas
 const createColumnSchema = z.object({
@@ -38,8 +39,12 @@ export async function GET(req: NextRequest) {
     if (!userId) return unauthorized()
 
     try {
-        const columns = await db.select().from(kanbanColumns).orderBy(asc(kanbanColumns.position))
-        const cards = await db.select().from(kanbanCards).orderBy(asc(kanbanCards.position))
+        const columns = await db.select().from(kanbanColumns)
+            .where(isNull(kanbanColumns.deletedAt))
+            .orderBy(asc(kanbanColumns.position))
+        const cards = await db.select().from(kanbanCards)
+            .where(isNull(kanbanCards.deletedAt))
+            .orderBy(asc(kanbanCards.position))
 
         const result = columns.map((col: typeof columns[0]) => ({
             ...col,
@@ -70,8 +75,10 @@ export async function POST(req: NextRequest) {
                 id,
                 title,
                 position: position || 0,
+                version: 1,
                 updatedAt: new Date()
             })
+            await writeSyncLog('kanban_column', id, 'create', 1)
         } else if (type === "card") {
             const result = createCardSchema.safeParse(body)
             if (!result.success) return badRequest("Invalid card data")
@@ -83,28 +90,39 @@ export async function POST(req: NextRequest) {
                 title,
                 description,
                 position: position || 0,
+                version: 1,
                 updatedAt: new Date()
             })
+            await writeSyncLog('kanban_card', id, 'create', 1)
         } else if (type === "sync") {
             const result = syncSchema.safeParse(body)
             if (!result.success) return badRequest("Invalid sync data")
 
             const { columns } = result.data
             for (const col of columns) {
+                const existing = await db.select({ version: kanbanColumns.version }).from(kanbanColumns).where(eq(kanbanColumns.id, col.id)).limit(1)
+                const newVersion = (existing[0]?.version || 0) + 1
+
                 await db.update(kanbanColumns)
-                    .set({ title: col.title, updatedAt: new Date() })
+                    .set({ title: col.title, version: newVersion, updatedAt: new Date() })
                     .where(eq(kanbanColumns.id, col.id))
+                await writeSyncLog('kanban_column', col.id, 'update', newVersion)
 
                 if (col.cards && col.cards.length > 0) {
                     for (let i = 0; i < col.cards.length; i++) {
                         const card = col.cards[i]
+                        const cardExisting = await db.select({ version: kanbanCards.version }).from(kanbanCards).where(eq(kanbanCards.id, card.id)).limit(1)
+                        const cardVersion = (cardExisting[0]?.version || 0) + 1
+
                         await db.update(kanbanCards)
                             .set({
                                 columnId: col.id,
                                 position: i,
+                                version: cardVersion,
                                 updatedAt: new Date()
                             })
                             .where(eq(kanbanCards.id, card.id))
+                        await writeSyncLog('kanban_card', card.id, 'update', cardVersion)
                     }
                 }
             }
@@ -137,9 +155,31 @@ export async function DELETE(req: NextRequest) {
 
     try {
         if (type === "column") {
-            await db.delete(kanbanColumns).where(eq(kanbanColumns.id, id))
+            const existing = await db.select({ version: kanbanColumns.version }).from(kanbanColumns).where(eq(kanbanColumns.id, id)).limit(1)
+            const newVersion = (existing[0]?.version || 0) + 1
+
+            // Soft delete all cards in the column first
+            const cards = await db.select({ id: kanbanCards.id, version: kanbanCards.version }).from(kanbanCards).where(eq(kanbanCards.columnId, id))
+            for (const card of cards) {
+                const cardVersion = (card.version || 0) + 1
+                await db.update(kanbanCards)
+                    .set({ deletedAt: new Date(), version: cardVersion, updatedAt: new Date() })
+                    .where(eq(kanbanCards.id, card.id))
+                await writeSyncLog('kanban_card', card.id, 'delete', cardVersion)
+            }
+
+            await db.update(kanbanColumns)
+                .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+                .where(eq(kanbanColumns.id, id))
+            await writeSyncLog('kanban_column', id, 'delete', newVersion)
         } else {
-            await db.delete(kanbanCards).where(eq(kanbanCards.id, id))
+            const existing = await db.select({ version: kanbanCards.version }).from(kanbanCards).where(eq(kanbanCards.id, id)).limit(1)
+            const newVersion = (existing[0]?.version || 0) + 1
+
+            await db.update(kanbanCards)
+                .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+                .where(eq(kanbanCards.id, id))
+            await writeSyncLog('kanban_card', id, 'delete', newVersion)
         }
         return NextResponse.json({ success: true })
     } catch (error) {

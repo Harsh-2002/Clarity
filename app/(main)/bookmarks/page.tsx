@@ -6,6 +6,8 @@ import { Bookmark, Link2, Loader2 } from "lucide-react"
 import { BookmarkCard, BookmarkCardSkeleton } from "@/components/bookmarks/bookmark-card"
 import { AddBookmarkInput } from "@/components/bookmarks/add-bookmark-input"
 import { toast } from "sonner"
+import { useSyncedQuery } from "@/lib/sync/hooks"
+import { getLocalDb } from "@/lib/sync/db"
 
 interface BookmarkData {
     id: string
@@ -28,12 +30,27 @@ const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$
 
 export default function BookmarksPage() {
     const [bookmarks, setBookmarks] = useState<BookmarkData[]>([])
-    const [isLoading, setIsLoading] = useState(true)
     const [isAdding, setIsAdding] = useState(false)
 
-    useEffect(() => {
-        fetchBookmarks()
+    const localFetchBookmarks = useCallback(async () => {
+        const db = getLocalDb()
+        const all = await db.bookmarks.toArray()
+        return all.filter(b => !b.deletedAt).sort((a, b) => b.createdAt - a.createdAt) as any as BookmarkData[]
     }, [])
+
+    const networkFetchBookmarks = useCallback(async () => {
+        const res = await fetch('/api/bookmarks')
+        if (!res.ok) throw new Error("Failed to fetch bookmarks")
+        return await res.json() as BookmarkData[]
+    }, [])
+
+    const { data: fetchedBookmarks, loading: isLoading } = useSyncedQuery(
+        localFetchBookmarks, networkFetchBookmarks, []
+    )
+
+    useEffect(() => {
+        if (fetchedBookmarks) setBookmarks(fetchedBookmarks)
+    }, [fetchedBookmarks])
 
     // Handle direct paste anywhere on the page
     const handlePaste = useCallback(async (e: ClipboardEvent) => {
@@ -96,20 +113,6 @@ export default function BookmarksPage() {
         document.addEventListener('paste', handlePaste)
         return () => document.removeEventListener('paste', handlePaste)
     }, [handlePaste])
-
-    const fetchBookmarks = async () => {
-        try {
-            const res = await fetch('/api/bookmarks')
-            if (res.ok) {
-                const data = await res.json()
-                setBookmarks(data)
-            }
-        } catch (error) {
-            console.error('Failed to fetch bookmarks:', error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     const handleAddBookmark = (newBookmark: BookmarkData) => {
         setBookmarks(prev => {

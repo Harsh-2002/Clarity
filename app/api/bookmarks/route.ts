@@ -3,8 +3,9 @@ import * as cheerio from 'cheerio';
 import { nanoid } from 'nanoid';
 import { db } from '@/lib/api/db/client';
 import { bookmarks } from '@/lib/api/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, isNull } from 'drizzle-orm';
 import { verifyAuth, unauthorized } from '@/lib/api/middleware/nextjs-auth';
+import { writeSyncLog } from '@/lib/api/db/sync-helpers';
 
 // Fetch Open Graph metadata from a URL
 async function fetchMetadata(url: string) {
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
             const existing = await db
                 .select()
                 .from(bookmarks)
-                .where(eq(bookmarks.url, url))
+                .where(and(eq(bookmarks.url, url), isNull(bookmarks.deletedAt)))
                 .limit(1);
 
             if (existing.length > 0) {
@@ -113,6 +114,7 @@ export async function GET(req: NextRequest) {
         const allBookmarks = await db
             .select()
             .from(bookmarks)
+            .where(isNull(bookmarks.deletedAt))
             .orderBy(desc(bookmarks.createdAt));
 
         return NextResponse.json(allBookmarks, { headers });
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
         const existing = await db
             .select()
             .from(bookmarks)
-            .where(eq(bookmarks.url, parsedUrl.href))
+            .where(and(eq(bookmarks.url, parsedUrl.href), isNull(bookmarks.deletedAt)))
             .limit(1);
 
         if (existing.length > 0) {
@@ -169,19 +171,22 @@ export async function POST(req: NextRequest) {
 
         // Create bookmark
         const now = new Date();
+        const bookmarkId = nanoid();
         const newBookmark = {
-            id: nanoid(),
+            id: bookmarkId,
             url: parsedUrl.href,
             title: metadata.title,
             description: metadata.description,
             image: metadata.image,
             favicon: metadata.favicon,
             tags: null,
+            version: 1,
             createdAt: now,
             updatedAt: now,
         };
 
         await db.insert(bookmarks).values(newBookmark);
+        await writeSyncLog('bookmark', bookmarkId, 'create', 1);
 
         return NextResponse.json(newBookmark, { status: 201, headers });
     } catch (error) {
@@ -214,11 +219,24 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'ID or URL is required' }, { status: 400, headers });
         }
 
-        // Delete by URL if provided (for extension)
+        // Soft delete by URL if provided (for extension)
         if (url) {
-            await db.delete(bookmarks).where(eq(bookmarks.url, url));
+            const existing = await db.select({ id: bookmarks.id, version: bookmarks.version }).from(bookmarks)
+                .where(and(eq(bookmarks.url, url), isNull(bookmarks.deletedAt))).limit(1);
+            if (existing.length > 0) {
+                const newVersion = (existing[0].version || 0) + 1;
+                await db.update(bookmarks)
+                    .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+                    .where(eq(bookmarks.id, existing[0].id));
+                await writeSyncLog('bookmark', existing[0].id, 'delete', newVersion);
+            }
         } else if (id) {
-            await db.delete(bookmarks).where(eq(bookmarks.id, id));
+            const existing = await db.select({ version: bookmarks.version }).from(bookmarks).where(eq(bookmarks.id, id)).limit(1);
+            const newVersion = (existing[0]?.version || 0) + 1;
+            await db.update(bookmarks)
+                .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+                .where(eq(bookmarks.id, id));
+            await writeSyncLog('bookmark', id, 'delete', newVersion);
         }
 
         return NextResponse.json({ success: true }, { headers });

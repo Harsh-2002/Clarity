@@ -6,7 +6,6 @@ import { Copy, Check, CheckSquare, Square, Download as DownloadIcon } from "luci
 import type { Transcript } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { getAccessToken } from "@/lib/storage"
 
 interface TranscriptCardProps {
   transcript: Transcript
@@ -100,7 +99,7 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
         </div>
 
         {/* Audio Player */}
-        {(transcript as any).recordingId && getAccessToken() && (
+        {(transcript as any).recordingId && (
           <div className="mt-2 text-primary">
             <audio
               controls
@@ -108,14 +107,14 @@ export function TranscriptCard({ transcript, onDelete, selectionMode, isSelected
               preload="metadata"
             >
               <source
-                src={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+                src={`/api/v1/storage/files/${(transcript as any).recordingId}`}
                 type="audio/webm"
               />
               Your browser does not support the audio element.
             </audio>
             <div className="flex justify-end mt-1">
               <a
-                href={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+                href={`/api/v1/storage/files/${(transcript as any).recordingId}`}
                 download={`recording-${transcript.id}.webm`}
                 className="text-[9px] text-muted-foreground hover:text-primary flex items-center gap-1"
               >

@@ -1,9 +1,10 @@
 import { db } from "@/lib/api/db/client"
 import { canvases } from "@/lib/api/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and, isNull } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+import { writeSyncLog } from "@/lib/api/db/sync-helpers"
 
 // Validation schema for updates
 const updateCanvasSchema = z.object({
@@ -27,7 +28,7 @@ export async function GET(
         const canvas = await db
             .select()
             .from(canvases)
-            .where(eq(canvases.id, id))
+            .where(and(eq(canvases.id, id), isNull(canvases.deletedAt)))
             .limit(1)
 
         if (canvas.length === 0) {
@@ -63,15 +64,21 @@ export async function PUT(
 
         const { name, data, thumbnail } = result.data
 
+        const existing = await db.select({ version: canvases.version }).from(canvases).where(eq(canvases.id, id)).limit(1)
+        const newVersion = (existing[0]?.version || 0) + 1
+
         await db
             .update(canvases)
             .set({
                 ...(name !== undefined && { name }),
                 ...(data !== undefined && { data }),
                 ...(thumbnail !== undefined && { thumbnail }),
+                version: newVersion,
                 updatedAt: new Date(),
             })
             .where(eq(canvases.id, id))
+
+        await writeSyncLog('canvas', id, 'update', newVersion)
 
         return NextResponse.json({ success: true })
     } catch (error) {
@@ -92,7 +99,15 @@ export async function DELETE(
     const { id } = await params
 
     try {
-        await db.delete(canvases).where(eq(canvases.id, id))
+        const existing = await db.select({ version: canvases.version }).from(canvases).where(eq(canvases.id, id)).limit(1)
+        const newVersion = (existing[0]?.version || 0) + 1
+
+        await db.update(canvases)
+            .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+            .where(eq(canvases.id, id))
+
+        await writeSyncLog('canvas', id, 'delete', newVersion)
+
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("Failed to delete canvas:", error)

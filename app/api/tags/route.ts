@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
             .from(notes)
             .where(isNull(notes.deletedAt))
 
-        notesWithTags.forEach(n => {
+        notesWithTags.forEach((n: any) => {
             if (n.tags) {
                 try {
                     const tagList = JSON.parse(n.tags) as string[]
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
         // Tasks tags
         const tasksWithTags = await db.select({ tags: tasks.tags }).from(tasks)
-        tasksWithTags.forEach(t => {
+        tasksWithTags.forEach((t: any) => {
             if (t.tags) {
                 try {
                     const tagList = JSON.parse(t.tags) as string[]
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
         // Canvases tags
         const canvasesWithTags = await db.select({ tags: canvases.tags }).from(canvases)
-        canvasesWithTags.forEach(c => {
+        canvasesWithTags.forEach((c: any) => {
             if (c.tags) {
                 try {
                     const tagList = JSON.parse(c.tags) as string[]
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
         // Journal tags
         const journalWithTags = await db.select({ tags: journalEntries.tags }).from(journalEntries)
-        journalWithTags.forEach(j => {
+        journalWithTags.forEach((j: any) => {
             if (j.tags) {
                 try {
                     const tagList = JSON.parse(j.tags) as string[]
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
             .from(transcripts)
             .where(isNull(transcripts.deletedAt))
 
-        transcriptsWithTags.forEach(t => {
+        transcriptsWithTags.forEach((t: any) => {
             if (t.tags) {
                 try {
                     const tagList = JSON.parse(t.tags) as string[]

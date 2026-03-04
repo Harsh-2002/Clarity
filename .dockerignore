@@ -1,6 +1,40 @@
+# version control
 .git
 .github
-.gitignore
+
+# build output (rebuilt inside container)
 .next
-node_modules
 out
+build
+migrate.js
+
+# dependencies (reinstalled inside container)
+node_modules
+
+# local data
+data
+
+# environment (secrets injected at runtime)
+.env
+.env.*
+
+# macOS
+.DS_Store
+._*
+
+# editors
+.vscode
+.idea
+
+# misc
+.vercel
+.turbo
+*.tsbuildinfo
+*.md
+!README.md
+
+# landing page (not part of the Next.js app)
+web
+
+# browser extension (not part of the server)
+extension

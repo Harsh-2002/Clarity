@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Copy, Check, Pen, Sparkles, Tag as TagIcon, Download } from "lucide-react"
 import type { Transcript } from "@/lib/types"
-import { saveTranscript, getAccessToken } from "@/lib/storage"
+import { saveTranscript } from "@/lib/storage"
 import { cn } from "@/lib/utils"
 import { TagSelector } from "../transcript-list/tag-selector"
 
@@ -77,7 +77,7 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
   return (
     <div className="space-y-8 w-full max-w-7xl mx-auto px-4">
       {/* Audio Player */}
-      {(transcript as any).recordingId && getAccessToken() && (
+      {(transcript as any).recordingId && (
         <div className="w-full bg-secondary/30 rounded-3xl px-6 py-4 flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground font-medium uppercase tracking-wider">
             <span>Original Recording</span>
@@ -91,13 +91,13 @@ export function TranscriptionResult({ transcript, onEdit, onFinetune, onBack }: 
             preload="metadata"
           >
             <source
-              src={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+              src={`/api/v1/storage/files/${(transcript as any).recordingId}`}
               type="audio/webm"
             />
           </audio>
           <div className="flex justify-end">
             <a
-              href={`/api/v1/storage/files/${(transcript as any).recordingId}?token=${getAccessToken()}`}
+              href={`/api/v1/storage/files/${(transcript as any).recordingId}`}
               download={`recording-${transcript.id}.webm`}
               className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
             >

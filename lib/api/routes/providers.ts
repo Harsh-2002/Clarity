@@ -25,7 +25,7 @@ const providerSchema = z.object({
 providersRoutes.get('/', async (c) => {
     const allProviders = await db.query.providers.findMany();
 
-    return c.json(allProviders.map(p => ({
+    return c.json(allProviders.map((p: any) => ({
         id: p.id,
         name: p.name,
         hasApiKey: !!p.encryptedApiKey,

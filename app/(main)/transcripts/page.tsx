@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TranscriptCard } from "@/components/transcript-list/transcript-card"
-import { getSettings, getTranscripts, deleteTranscript, exportAllData, getAccessToken } from "@/lib/storage"
+import { getSettings, getTranscripts, deleteTranscript, exportAllData } from "@/lib/storage"
 import type { Transcript } from "@/lib/types"
 import { Trash2, Download, CheckSquare, Square } from "lucide-react"
+import { isOfflineSyncEnabled } from "@/lib/sync/pwa-detection"
+import { getLocalDb } from "@/lib/sync/db"
+import { SyncEngine } from "@/lib/sync/engine"
 
 export default function TranscriptsPage() {
   const router = useRouter()
@@ -19,12 +22,29 @@ export default function TranscriptsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    // No need to fetch settings just for auth check anymore
-    // AuthGuard guarantees onboardingComplete is true
     setIsOnboarded(true)
-    getTranscripts().then(data => {
-      setTranscripts(data.sort((a, b) => b.createdAt - a.createdAt))
-    })
+
+    const loadTranscripts = async () => {
+      if (isOfflineSyncEnabled()) {
+        try {
+          const engine = SyncEngine.getInstance()
+          try { await engine.initialSync() } catch {}
+          const db = getLocalDb()
+          const all = await db.transcripts.toArray()
+          const filtered = all.filter(t => !t.deletedAt).sort((a, b) => b.createdAt - a.createdAt)
+          setTranscripts(filtered as any)
+        } catch {
+          // Fallback to network
+          const data = await getTranscripts()
+          setTranscripts(data.sort((a: any, b: any) => b.createdAt - a.createdAt))
+        }
+      } else {
+        const data = await getTranscripts()
+        setTranscripts(data.sort((a: any, b: any) => b.createdAt - a.createdAt))
+      }
+    }
+
+    loadTranscripts()
   }, [router])
 
   // Get all unique tags from transcripts

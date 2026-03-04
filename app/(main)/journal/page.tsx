@@ -6,7 +6,8 @@ import { Plus, Trash2, ArrowRight, FileText, CheckSquare, Smile, Meh, Frown, Spa
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { toast } from "sonner"
-import { getAccessToken } from "@/lib/storage"
+import { useSyncedQuery } from "@/lib/sync/hooks"
+import { getLocalDb } from "@/lib/sync/db"
 
 interface JournalEntry {
     id: string
@@ -39,7 +40,6 @@ export default function JournalPage() {
     const [entries, setEntries] = useState<JournalEntry[]>([])
     const [newEntry, setNewEntry] = useState("")
     const [selectedMood, setSelectedMood] = useState<string | null>(null)
-    const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [dailyPrompt, setDailyPrompt] = useState("")
 
@@ -50,27 +50,25 @@ export default function JournalPage() {
     }, [])
 
     // Fetch entries
-    const fetchEntries = useCallback(async () => {
-        try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = {}
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
-            const res = await fetch("/api/journal?limit=50", { headers })
-            if (res.ok) {
-                const data = await res.json()
-                setEntries(data)
-            }
-        } catch (error) {
-            console.error("Failed to fetch entries:", error)
-        } finally {
-            setLoading(false)
-        }
+    const localFetchEntries = useCallback(async () => {
+        const db = getLocalDb()
+        const all = await db.journalEntries.toArray()
+        return all.filter(e => !e.deletedAt).sort((a, b) => b.createdAt - a.createdAt) as any as JournalEntry[]
     }, [])
 
+    const networkFetchEntries = useCallback(async () => {
+        const res = await fetch("/api/journal?limit=50", { credentials: "include" })
+        if (!res.ok) throw new Error("Failed to fetch entries")
+        return await res.json() as JournalEntry[]
+    }, [])
+
+    const { data: fetchedEntries, loading, refetch: fetchEntries } = useSyncedQuery(
+        localFetchEntries, networkFetchEntries, []
+    )
+
     useEffect(() => {
-        fetchEntries()
-    }, [fetchEntries])
+        if (fetchedEntries) setEntries(fetchedEntries)
+    }, [fetchedEntries])
 
     // Add new entry
     const addEntry = async () => {
@@ -93,13 +91,10 @@ export default function JournalPage() {
         setSelectedMood(null)
 
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = { "Content-Type": "application/json" }
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
             const res = await fetch("/api/journal", {
                 method: "POST",
-                headers,
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id,
                     content: entry.content,
@@ -124,11 +119,7 @@ export default function JournalPage() {
         setEntries(entries.filter(e => e.id !== id))
 
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = {}
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
-            await fetch(`/api/journal?id=${id}`, { method: "DELETE", headers })
+            await fetch(`/api/journal?id=${id}`, { method: "DELETE", credentials: "include" })
             toast.success("Entry deleted")
         } catch {
             setEntries(previousEntries)
@@ -139,13 +130,10 @@ export default function JournalPage() {
     // Convert entry
     const convertEntry = async (id: string, type: "task" | "note") => {
         try {
-            const token = getAccessToken()
-            const headers: Record<string, string> = { "Content-Type": "application/json" }
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
             const res = await fetch(`/api/journal/${id}/convert`, {
                 method: "POST",
-                headers,
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type }),
             })
             if (res.ok) {

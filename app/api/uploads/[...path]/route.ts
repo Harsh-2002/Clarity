@@ -44,6 +44,9 @@ export async function GET(
             headers: {
                 'Content-Type': contentType,
                 'Cache-Control': 'public, max-age=31536000, immutable',
+                'X-Content-Type-Options': 'nosniff',
+                'Content-Disposition': 'inline',
+                'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
             },
         });
     } catch (error) {

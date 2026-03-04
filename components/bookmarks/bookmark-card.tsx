@@ -37,7 +37,7 @@ export function BookmarkCard({ bookmark, onDelete }: BookmarkCardProps) {
     }
 
     return (
-        <Card className="group relative overflow-hidden border-border/50 bg-background hover:shadow-lg transition-all duration-300 transform-gpu">
+        <Card className="group relative overflow-hidden border-border/50 bg-background hover:shadow-lg transition-shadow duration-300">
             {/* Delete Button */}
             <Button
                 variant="ghost"
@@ -60,7 +60,7 @@ export function BookmarkCard({ bookmark, onDelete }: BookmarkCardProps) {
             >
                 {/* Cover Image */}
                 {bookmark.image ? (
-                    <div className="aspect-video w-full overflow-hidden bg-secondary relative">
+                    <div className="aspect-video w-full overflow-hidden rounded-t-3xl bg-secondary relative">
                         <Image
                             src={bookmark.image}
                             alt={bookmark.title || 'Bookmark'}

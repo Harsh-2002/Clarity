@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -25,6 +25,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { useSyncedQuery } from "@/lib/sync/hooks"
+import { getLocalDb } from "@/lib/sync/db"
 
 interface Canvas {
     id: string
@@ -39,27 +41,33 @@ const slideUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 },
 
 export default function CanvasListPage() {
     const [canvases, setCanvases] = useState<Canvas[]>([])
-    const [loading, setLoading] = useState(true)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [canvasToDelete, setCanvasToDelete] = useState<Canvas | null>(null)
     const router = useRouter()
 
-    const fetchCanvases = async () => {
-        try {
-            const res = await fetch("/api/canvas")
-            if (res.ok) {
-                setCanvases(await res.json())
-            }
-        } catch (error) {
-            console.error("Failed to fetch canvases:", error)
-        } finally {
-            setLoading(false)
-        }
-    }
+    const localFetchCanvases = useCallback(async () => {
+        const db = getLocalDb()
+        const all = await db.canvases.toArray()
+        return all.filter(c => !c.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).map(c => ({
+            id: c.id, name: c.name, thumbnail: c.thumbnail || null,
+            createdAt: new Date(c.createdAt).toISOString(),
+            updatedAt: new Date(c.updatedAt).toISOString(),
+        })) as Canvas[]
+    }, [])
+
+    const networkFetchCanvases = useCallback(async () => {
+        const res = await fetch("/api/canvas")
+        if (!res.ok) throw new Error("Failed to fetch canvases")
+        return await res.json() as Canvas[]
+    }, [])
+
+    const { data: fetchedCanvases, loading } = useSyncedQuery(
+        localFetchCanvases, networkFetchCanvases, []
+    )
 
     useEffect(() => {
-        fetchCanvases()
-    }, [])
+        if (fetchedCanvases) setCanvases(fetchedCanvases)
+    }, [fetchedCanvases])
 
     const createNewCanvas = async () => {
         const id = crypto.randomUUID()

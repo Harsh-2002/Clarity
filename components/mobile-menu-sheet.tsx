@@ -7,7 +7,6 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { getAccessToken } from "@/lib/storage"
 
 export function MobileMenuSheet() {
     const [open, setOpen] = useState(false)
@@ -18,11 +17,8 @@ export function MobileMenuSheet() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const token = getAccessToken()
-                if (!token) return
-
                 const res = await fetch('/api/v1/auth/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    credentials: 'include',
                 })
 
                 if (res.ok) {

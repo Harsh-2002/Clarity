@@ -161,21 +161,28 @@ export async function getSettings(): Promise<AppSettings> {
 // --- Transcripts ---
 
 export async function saveTranscript(transcript: Transcript): Promise<Transcript> {
-  // If we have an ID and it's an update
-  const all = await getTranscripts()
-  const exists = all.find(t => t.id === transcript.id)
-
-  if (exists) {
-    return apiFetch<Transcript>(`/transcripts/${transcript.id}`, {
-      method: "PUT",
-      body: JSON.stringify(transcript),
-    })
-  } else {
-    return apiFetch<Transcript>("/transcripts", {
-      method: "POST",
-      body: JSON.stringify(transcript),
-    })
+  if (transcript.id) {
+    // Try update first; if not found, create
+    try {
+      return await apiFetch<Transcript>(`/transcripts/${transcript.id}`, {
+        method: "PUT",
+        body: JSON.stringify(transcript),
+      })
+    } catch (e) {
+      // If 404/not found, fall through to create
+      if (e instanceof Error && (e.message.includes("not found") || e.message.includes("Not found"))) {
+        return apiFetch<Transcript>("/transcripts", {
+          method: "POST",
+          body: JSON.stringify(transcript),
+        })
+      }
+      throw e
+    }
   }
+  return apiFetch<Transcript>("/transcripts", {
+    method: "POST",
+    body: JSON.stringify(transcript),
+  })
 }
 
 export async function getTranscripts(): Promise<Transcript[]> {
@@ -215,8 +222,14 @@ export async function uploadAudio(blob: Blob): Promise<UploadResponse> {
 // --- Finetuning ---
 
 export async function saveFinetuning(finetune: FinetuneRequest): Promise<void> {
-  // Mock implementation or future endpoint
-  console.log("Saving finetune request", finetune)
+  if (!finetune.transcriptId || !finetune.finetumedText) {
+    console.warn("saveFinetuning: missing transcriptId or finetumedText")
+    return
+  }
+  await apiFetch(`/transcripts/${finetune.transcriptId}`, {
+    method: "PUT",
+    body: JSON.stringify({ fineTunedText: finetune.finetumedText }),
+  })
 }
 
 export async function getFinetunings(): Promise<FinetuneRequest[]> {
@@ -308,6 +321,13 @@ export async function logout(): Promise<void> {
   }
 
   clearAccessToken()
+
+  // Reset auth guard cache so next login goes through full check
+  try {
+    const { resetAuthGuard } = await import("@/components/auth-guard")
+    resetAuthGuard()
+  } catch {}
+
   if (typeof window !== "undefined") {
     window.location.href = "/login"
   }
@@ -315,24 +335,108 @@ export async function logout(): Promise<void> {
 
 // --- Data Management ---
 
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "include" })
+  if (!res.ok) return [] as unknown as T
+  return res.json()
+}
+
 export async function exportAllData(): Promise<any> {
-  const [settings, providers, transcripts] = await Promise.all([
+  const [settings, providers, transcripts, notes, tasks, journal, bookmarks, canvases, kanban] = await Promise.all([
     getSettings(),
     getProviders(),
-    getTranscripts()
+    getTranscripts(),
+    apiFetch<any[]>("/notes"),
+    fetchJson<any[]>("/api/tasks"),
+    fetchJson<any[]>("/api/journal"),
+    fetchJson<any[]>("/api/bookmarks"),
+    fetchJson<any[]>("/api/canvas"),
+    fetchJson<any>("/api/kanban"),
   ])
   return {
-    version: 1,
+    version: 2,
     timestamp: Date.now(),
     settings,
     providers,
-    transcripts
+    transcripts,
+    notes,
+    tasks,
+    journal,
+    bookmarks,
+    canvases,
+    kanban,
   }
 }
 
 export async function importData(data: any): Promise<void> {
-  // TODO: Implement server-side import
-  console.warn("Import not fully implemented for server-side storage yet", data)
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid import data")
+  }
+
+  // Import settings
+  if (data.settings) {
+    await saveSettings(data.settings).catch(e => console.error("Import settings failed:", e))
+  }
+
+  // Import providers
+  if (Array.isArray(data.providers)) {
+    for (const provider of data.providers) {
+      await saveProvider(provider).catch(e => console.error("Import provider failed:", e))
+    }
+  }
+
+  // Import transcripts
+  if (Array.isArray(data.transcripts)) {
+    for (const transcript of data.transcripts) {
+      await saveTranscript(transcript).catch(e => console.error("Import transcript failed:", e))
+    }
+  }
+
+  // Import notes
+  if (Array.isArray(data.notes)) {
+    for (const note of data.notes) {
+      await apiFetch("/notes", {
+        method: "POST",
+        body: JSON.stringify(note),
+      }).catch(e => console.error("Import note failed:", e))
+    }
+  }
+
+  // Import tasks
+  if (Array.isArray(data.tasks)) {
+    for (const task of data.tasks) {
+      await fetch("/api/tasks", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(task),
+      }).catch(e => console.error("Import task failed:", e))
+    }
+  }
+
+  // Import journal entries
+  if (Array.isArray(data.journal)) {
+    for (const entry of data.journal) {
+      await fetch("/api/journal", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      }).catch(e => console.error("Import journal entry failed:", e))
+    }
+  }
+
+  // Import bookmarks
+  if (Array.isArray(data.bookmarks)) {
+    for (const bookmark of data.bookmarks) {
+      await fetch("/api/bookmarks", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookmark),
+      }).catch(e => console.error("Import bookmark failed:", e))
+    }
+  }
 }
 
 export async function clearAllData(): Promise<void> {

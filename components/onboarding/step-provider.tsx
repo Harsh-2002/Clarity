@@ -31,7 +31,7 @@ export function StepProvider() {
         <StepProgress />
 
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
             Choose Intelligence
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">

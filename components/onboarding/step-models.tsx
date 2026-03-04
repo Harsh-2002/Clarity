@@ -11,6 +11,7 @@ import {
 import { useOnboarding } from "./onboarding-context"
 import { motion } from "framer-motion"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import { Label } from "@/components/ui/label"
 import { StepProgress } from "./step-progress"
 
 export function StepModels() {
@@ -35,7 +36,7 @@ export function StepModels() {
         <StepProgress />
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
             Model Configuration
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">
@@ -45,9 +46,9 @@ export function StepModels() {
 
         <div className="space-y-6">
           <div className="space-y-3">
-            <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Transcription Engine</label>
+            <Label className="text-xs uppercase tracking-widest text-muted-foreground">Transcription Engine</Label>
             <Select value={transcriptionModel} onValueChange={setTranscriptionModel}>
-              <SelectTrigger className="w-full h-14 rounded-full">
+              <SelectTrigger className="w-full h-12">
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
@@ -65,9 +66,9 @@ export function StepModels() {
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Refinement Model (Optional)</label>
+            <Label className="text-xs uppercase tracking-widest text-muted-foreground">Refinement Model (Optional)</Label>
             <Select value={finetuneModel || "skip"} onValueChange={(value) => setFinetuneModel(value === "skip" ? "" : value)}>
-              <SelectTrigger className="w-full h-14 rounded-full">
+              <SelectTrigger className="w-full h-12">
                 <SelectValue placeholder="Skip refinement" />
               </SelectTrigger>
               <SelectContent>

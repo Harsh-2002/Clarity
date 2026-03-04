@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import {
@@ -24,8 +24,37 @@ import { MobileStatsCarousel } from "@/components/dashboard/mobile-stats-carouse
 import { ZenQuoteWidget } from "@/components/dashboard/zen-quote-widget"
 import { OnThisDayWidget } from "@/components/dashboard/on-this-day-widget"
 import { SortableWidget } from "@/components/dashboard/sortable-widget"
-import { getAccessToken } from "@/lib/storage"
 import { cn } from "@/lib/utils"
+import { isOfflineSyncEnabled } from "@/lib/sync/pwa-detection"
+import { getLocalDb } from "@/lib/sync/db"
+import { SyncEngine } from "@/lib/sync/engine"
+
+// Isolated clock component — ticks every second without re-rendering the parent
+const LiveClock = memo(function LiveClock() {
+    const [time, setTime] = useState(new Date())
+
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000)
+        return () => clearInterval(timer)
+    }, [])
+
+    const formatTime = () => time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+    const formatDate = () => time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+    return (
+        <div className="text-right hidden md:block">
+            <div className="text-4xl md:text-5xl font-light tracking-tight tabular-nums">{formatTime()}</div>
+            <div className="text-muted-foreground mt-1">{formatDate()}</div>
+        </div>
+    )
+})
+
+function getGreeting() {
+    const hour = new Date().getHours()
+    if (hour < 12) return "Good morning"
+    if (hour < 18) return "Good afternoon"
+    return "Good evening"
+}
 
 export default function DashboardPage() {
     const [stats, setStats] = useState({ notes: 0, pendingTasks: 0, completedTasks: 0, transcripts: 0, canvases: 0, journals: 0, bookmarks: 0 })
@@ -34,7 +63,6 @@ export default function DashboardPage() {
     const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([])
     const [recentTranscripts, setRecentTranscripts] = useState<Transcript[]>([])
     const [recentCanvases, setRecentCanvases] = useState<Canvas[]>([])
-    const [currentTime, setCurrentTime] = useState(new Date())
     const [mounted, setMounted] = useState(false)
 
     // Widget Order State
@@ -53,10 +81,8 @@ export default function DashboardPage() {
         })
     )
 
-    // Live clock
     useEffect(() => {
         setMounted(true)
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000)
 
         // Load widget order from localStorage
         const savedOrder = localStorage.getItem("dashboard-widget-order")
@@ -67,8 +93,6 @@ export default function DashboardPage() {
                 console.error("Failed to parse widget order", e)
             }
         }
-
-        return () => clearInterval(timer)
     }, [])
 
     function handleDragEnd(event: DragEndEvent) {
@@ -87,84 +111,80 @@ export default function DashboardPage() {
         }
     }
 
-    // Fetch data
+    // Fetch data — from IndexedDB in PWA mode, network otherwise
+    const fetchDataFromLocal = useCallback(async () => {
+        const db = getLocalDb()
+        const [notes, tasks, transcripts, canvases, journals, bmarks] = await Promise.all([
+            db.notes.toArray().then(n => n.filter(x => !x.deletedAt)),
+            db.tasks.toArray().then(t => t.filter(x => !x.deletedAt)),
+            db.transcripts.toArray().then(t => t.filter(x => !x.deletedAt)),
+            db.canvases.toArray().then(c => c.filter(x => !x.deletedAt)),
+            db.journalEntries.toArray().then(j => j.filter(x => !x.deletedAt)),
+            db.bookmarks.toArray().then(b => b.filter(x => !x.deletedAt)),
+        ])
+
+        const pending = tasks.filter(t => !t.completed)
+        const completed = tasks.filter(t => t.completed)
+        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const upcoming = pending
+            .filter(t => t.dueDate && t.dueDate >= today.getTime())
+            .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
+            .slice(0, 5)
+
+        setRecentNotes(notes.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3) as any)
+        setRecentTasks(pending.slice(0, 5) as any)
+        setUpcomingTasks(upcoming as any)
+        setRecentTranscripts(transcripts.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3) as any)
+        setRecentCanvases(canvases.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3) as any)
+        setStats({
+            notes: notes.length,
+            pendingTasks: pending.length,
+            completedTasks: completed.length,
+            transcripts: transcripts.length,
+            canvases: canvases.length,
+            journals: journals.length,
+            bookmarks: bmarks.length,
+        })
+    }, [])
+
+    const fetchDataFromNetwork = useCallback(async () => {
+        const res = await fetch("/api/dashboard", { credentials: "include" })
+        if (!res.ok) return
+
+        const data = await res.json()
+        setStats(data.stats)
+        setRecentNotes(data.recentNotes)
+        setUpcomingTasks(data.upcomingTasks)
+        setRecentTranscripts(data.recentTranscripts)
+        setRecentCanvases(data.recentCanvases)
+    }, [])
+
     useEffect(() => {
-        const fetchData = async () => {
+        if (!mounted) return
+
+        const loadData = async () => {
             try {
-                const token = getAccessToken()
-                const headers: Record<string, string> = {}
-                if (token) headers["Authorization"] = `Bearer ${token}`
-
-                const [notesRes, tasksRes, transcriptsRes, canvasesRes, journalRes, bookmarksRes] = await Promise.all([
-                    fetch("/api/v1/notes", { headers }),
-                    fetch("/api/tasks", { headers }),
-                    fetch("/api/v1/transcripts", { headers }),
-                    fetch("/api/canvas", { headers }),
-                    fetch("/api/journal?limit=50", { headers }),
-                    fetch("/api/bookmarks", { headers })
-                ])
-
-                if (notesRes.ok) {
-                    const notes = await notesRes.json()
-                    setRecentNotes(notes.slice(0, 3))
-                    setStats(prev => ({ ...prev, notes: notes.length }))
-                }
-
-                if (tasksRes.ok) {
-                    const tasks: Task[] = await tasksRes.json()
-                    const pending = tasks.filter(t => !t.completed)
-                    const completed = tasks.filter(t => t.completed)
-                    const today = new Date()
-                    today.setHours(0, 0, 0, 0)
-                    const upcoming = pending
-                        .filter(t => t.dueDate && new Date(t.dueDate) >= today)
-                        .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
-                        .slice(0, 5)
-
-                    // Recent tasks (regardless of due date)
-                    setRecentTasks(pending.slice(0, 5))
-                    setUpcomingTasks(upcoming)
-                    setStats(prev => ({ ...prev, pendingTasks: pending.length, completedTasks: completed.length }))
-                }
-
-                if (transcriptsRes.ok) {
-                    const transcripts = await transcriptsRes.json()
-                    setRecentTranscripts(transcripts.slice(0, 3))
-                    setStats(prev => ({ ...prev, transcripts: transcripts.length }))
-                }
-
-                if (canvasesRes.ok) {
-                    const canvases = await canvasesRes.json()
-                    setRecentCanvases(canvases.slice(0, 3))
-                    setStats(prev => ({ ...prev, canvases: canvases.length }))
-                }
-
-                if (journalRes.ok) {
-                    const journals = await journalRes.json()
-                    setStats(prev => ({ ...prev, journals: journals.length }))
-                }
-
-                if (bookmarksRes.ok) {
-                    const bookmarks = await bookmarksRes.json()
-                    setStats(prev => ({ ...prev, bookmarks: bookmarks.length }))
+                if (isOfflineSyncEnabled()) {
+                    const engine = SyncEngine.getInstance()
+                    try { await engine.initialSync() } catch {}
+                    await fetchDataFromLocal()
+                } else {
+                    await fetchDataFromNetwork()
                 }
             } catch (error) {
                 console.error("Failed to load dashboard data", error)
             }
         }
 
-        if (mounted) fetchData()
-    }, [mounted])
+        loadData()
 
-    // Format time
-    const formatTime = () => currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-    const formatDate = () => currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-    const getGreeting = () => {
-        const hour = currentTime.getHours()
-        if (hour < 12) return "Good morning"
-        if (hour < 18) return "Good afternoon"
-        return "Good evening"
-    }
+        // Subscribe to sync engine updates in PWA mode
+        if (isOfflineSyncEnabled()) {
+            const engine = SyncEngine.getInstance()
+            const unsub = engine.subscribe(() => { fetchDataFromLocal() })
+            return () => { unsub() }
+        }
+    }, [mounted, fetchDataFromLocal, fetchDataFromNetwork])
 
     const fadeIn = { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.15 } }
     const slideUp = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } }
@@ -195,10 +215,7 @@ export default function DashboardPage() {
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{getGreeting()}</h1>
                         <p className="text-muted-foreground text-base md:text-lg">Here&apos;s what&apos;s happening today.</p>
                     </div>
-                    <div className="text-right hidden md:block">
-                        <div className="text-4xl md:text-5xl font-light tracking-tight tabular-nums">{formatTime()}</div>
-                        <div className="text-muted-foreground mt-1">{formatDate()}</div>
-                    </div>
+                    <LiveClock />
                 </motion.div>
 
                 {/* Stats */}

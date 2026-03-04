@@ -8,7 +8,7 @@ import { PROVIDER_CONFIGS, validateApiKey, fetchAvailableModels } from "@/lib/pr
 import { saveProvider } from "@/lib/storage"
 import type { ProviderConfig } from "@/lib/types"
 import { motion } from "framer-motion"
-import { ArrowLeft, ArrowRight, Loader2, Key } from "lucide-react"
+import { ArrowLeft, ArrowRight, Loader2, Key, Eye, EyeOff } from "lucide-react"
 import { StepProgress } from "./step-progress"
 
 export function StepApiKey() {
@@ -106,7 +106,7 @@ export function StepApiKey() {
         <StepProgress />
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
             Connect {providerConfig?.name}
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">
@@ -124,19 +124,23 @@ export function StepApiKey() {
                 setApiKey(e.target.value)
                 setError(null)
               }}
-              className={`h-14 rounded-full border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center pr-16 ${error ? "border-destructive/50" : ""}`}
+              className={`h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center pr-16 ${error ? "border-destructive/50" : ""}`}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setShowKey(!showKey)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-background/50"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
+              aria-label={showKey ? "Hide API key" : "Show API key"}
+              title={showKey ? "Hide API key" : "Show API key"}
             >
-              {showKey ? "Hide" : "Show"}
-            </button>
+              {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
           </div>
 
           {error && (
-            <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-destructive font-medium tracking-wide">
+            <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-destructive tracking-wide">
               {error}
             </motion.p>
           )}

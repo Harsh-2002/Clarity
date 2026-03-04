@@ -1,9 +1,10 @@
 import { db } from "@/lib/api/db/client"
 import { journalEntries } from "@/lib/api/db/schema"
-import { eq, desc, gte, lte, and } from "drizzle-orm"
+import { eq, desc, gte, lte, and, isNull } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+import { writeSyncLog } from "@/lib/api/db/sync-helpers"
 
 // Validation schemas
 const createEntrySchema = z.object({
@@ -23,8 +24,6 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50")
 
     try {
-        let query = db.select().from(journalEntries)
-
         if (date) {
             const startOfDay = new Date(date)
             startOfDay.setHours(0, 0, 0, 0)
@@ -36,7 +35,8 @@ export async function GET(req: NextRequest) {
                 .from(journalEntries)
                 .where(and(
                     gte(journalEntries.createdAt, startOfDay),
-                    lte(journalEntries.createdAt, endOfDay)
+                    lte(journalEntries.createdAt, endOfDay),
+                    isNull(journalEntries.deletedAt)
                 ))
                 .orderBy(desc(journalEntries.createdAt))
                 .limit(limit)
@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
         const entries = await db
             .select()
             .from(journalEntries)
+            .where(isNull(journalEntries.deletedAt))
             .orderBy(desc(journalEntries.createdAt))
             .limit(limit)
 
@@ -71,14 +72,19 @@ export async function POST(req: NextRequest) {
         }
 
         const { id, content, mood, tags } = result.data
+        const now = new Date()
 
         await db.insert(journalEntries).values({
             id,
             content,
             mood: mood || null,
             tags: tags || null,
-            createdAt: new Date(),
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
         })
+
+        await writeSyncLog('journal_entry', id, 'create', 1)
 
         return NextResponse.json({ success: true, id })
     } catch (error) {
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// DELETE /api/journal - Delete entry
+// DELETE /api/journal - Soft delete entry
 export async function DELETE(req: NextRequest) {
     const userId = await verifyAuth(req)
     if (!userId) return unauthorized()
@@ -100,7 +106,15 @@ export async function DELETE(req: NextRequest) {
     }
 
     try {
-        await db.delete(journalEntries).where(eq(journalEntries.id, id))
+        const existing = await db.select({ version: journalEntries.version }).from(journalEntries).where(eq(journalEntries.id, id)).limit(1)
+        const newVersion = (existing[0]?.version || 0) + 1
+
+        await db.update(journalEntries)
+            .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+            .where(eq(journalEntries.id, id))
+
+        await writeSyncLog('journal_entry', id, 'delete', newVersion)
+
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("Failed to delete journal entry:", error)

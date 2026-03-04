@@ -106,12 +106,12 @@ export default function SetupPage() {
             <motion.div
                 initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
                 animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
                 className="w-full max-w-sm"
             >
                 <div className="space-y-8 text-center">
                     <div className="space-y-2">
-                        <h1 className="text-3xl font-medium tracking-tight">
+                        <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
                             Welcome to Clarity
                         </h1>
                         <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">
@@ -157,7 +157,7 @@ export default function SetupPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Secure Password"
-                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center font-mono text-sm pr-28"
+                                    className="h-12 border-border/60 dark:border-input hover:bg-muted/20 transition-all placeholder:text-muted-foreground/50 tracking-wide text-center"
                                 />
                                 <div className="absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                     <Button

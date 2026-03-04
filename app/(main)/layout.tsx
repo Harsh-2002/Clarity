@@ -21,7 +21,7 @@ export default function MainLayout({
                     "min-h-screen transition-all duration-300 md:pl-16"
                 )}
             >
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="animate-in fade-in duration-150">
                     {children}
                 </div>
             </div>

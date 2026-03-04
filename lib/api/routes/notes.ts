@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../db/client';
 import { notes, syncLog, noteLinks } from '../db/schema';
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq, isNull, and, desc, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { broadcastNoteUpdate } from './public';
 
 const notesRoutes = new Hono();
 
@@ -12,6 +13,7 @@ const noteSchema = z.object({
     title: z.string().min(1),
     content: z.string(),
     version: z.number().optional(),
+    expectedVersion: z.number().optional(),
     createdAt: z.number().optional(),
     updatedAt: z.number().optional(),
 });
@@ -23,12 +25,43 @@ const updateLinksSchema = z.object({
 // Regex to find [[Note Title]] links
 const LINK_REGEX = /\[\[([^\]]+)\]\]/g
 
-// List all notes
+// List all notes (with optional pagination)
+// Excludes heavy 'content' field by default — use ?full=true to include it
 notesRoutes.get('/', async (c) => {
-    const allNotes = await db.query.notes.findMany({
-        where: isNull(notes.deletedAt),
-        orderBy: (notes, { desc }) => [desc(notes.updatedAt)],
-    });
+    const limitParam = parseInt(c.req.query('limit') || '0', 10);
+    const offset = parseInt(c.req.query('offset') || '0', 10);
+    const full = c.req.query('full') === 'true';
+
+    if (full) {
+        // Legacy: return all columns (for sync, export, etc.)
+        let fullQuery = db.select().from(notes)
+            .where(isNull(notes.deletedAt))
+            .orderBy(desc(notes.updatedAt))
+            .$dynamic();
+        if (limitParam > 0) fullQuery = fullQuery.limit(limitParam);
+        if (offset > 0) fullQuery = fullQuery.offset(offset);
+        const allNotes = await fullQuery;
+        return c.json(allNotes);
+    }
+
+    // Default: exclude heavy content field, include preview
+    let query = db.select({
+        id: notes.id,
+        title: notes.title,
+        preview: sql<string>`substr(${notes.content}, 1, 300)`,
+        isPublished: notes.isPublished,
+        publishedSlug: notes.publishedSlug,
+        viewCount: notes.viewCount,
+        version: notes.version,
+        tags: notes.tags,
+        createdAt: notes.createdAt,
+        updatedAt: notes.updatedAt,
+    }).from(notes).where(isNull(notes.deletedAt)).orderBy(desc(notes.updatedAt)).$dynamic();
+
+    if (limitParam > 0) query = query.limit(limitParam);
+    if (offset > 0) query = query.offset(offset);
+
+    const allNotes = await query;
     return c.json(allNotes);
 });
 
@@ -54,22 +87,23 @@ notesRoutes.post('/', async (c) => {
     const noteId = data.id || nanoid();
     const now = new Date();
 
-    await db.insert(notes).values({
-        id: noteId,
-        title: data.title,
-        content: data.content,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-    });
+    await db.transaction(async (tx: any) => {
+        await tx.insert(notes).values({
+            id: noteId,
+            title: data.title,
+            content: data.content,
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+        });
 
-    // Log sync event
-    await db.insert(syncLog).values({
-        entityType: 'note',
-        entityId: noteId,
-        operation: 'create',
-        version: 1,
-        timestamp: now,
+        await tx.insert(syncLog).values({
+            entityType: 'note',
+            entityId: noteId,
+            operation: 'create',
+            version: 1,
+            timestamp: now,
+        });
     });
 
     return c.json({ id: noteId, version: 1, synced: true }, 201);
@@ -90,26 +124,41 @@ notesRoutes.put('/:id', async (c) => {
         return c.json({ error: 'Note not found' }, 404);
     }
 
+    // Optimistic concurrency check
+    if (data.expectedVersion !== undefined && existing.version !== data.expectedVersion) {
+        return c.json({
+            error: 'Version conflict',
+            serverVersion: existing.version,
+            expectedVersion: data.expectedVersion,
+        }, 409);
+    }
+
     const newVersion = (existing.version || 0) + 1;
     const now = new Date();
 
-    await db.update(notes)
-        .set({
-            title: data.title,
-            content: data.content,
-            version: newVersion,
-            updatedAt: now,
-        })
-        .where(eq(notes.id, noteId));
+    await db.transaction(async (tx: any) => {
+        await tx.update(notes)
+            .set({
+                title: data.title,
+                content: data.content,
+                version: newVersion,
+                updatedAt: now,
+            })
+            .where(eq(notes.id, noteId));
 
-    // Log sync event
-    await db.insert(syncLog).values({
-        entityType: 'note',
-        entityId: noteId,
-        operation: 'update',
-        version: newVersion,
-        timestamp: now,
+        await tx.insert(syncLog).values({
+            entityType: 'note',
+            entityId: noteId,
+            operation: 'update',
+            version: newVersion,
+            timestamp: now,
+        });
     });
+
+    // Broadcast to SSE subscribers if note is published
+    if (existing.isPublished && existing.publishedSlug) {
+        broadcastNoteUpdate(existing.publishedSlug, data.content);
+    }
 
     return c.json({ id: noteId, version: newVersion, synced: true });
 });
@@ -129,21 +178,22 @@ notesRoutes.delete('/:id', async (c) => {
 
     const newVersion = (existing.version || 0) + 1;
 
-    await db.update(notes)
-        .set({
-            deletedAt: now,
-            version: newVersion,
-            updatedAt: now,
-        })
-        .where(eq(notes.id, noteId));
+    await db.transaction(async (tx: any) => {
+        await tx.update(notes)
+            .set({
+                deletedAt: now,
+                version: newVersion,
+                updatedAt: now,
+            })
+            .where(eq(notes.id, noteId));
 
-    // Log sync event
-    await db.insert(syncLog).values({
-        entityType: 'note',
-        entityId: noteId,
-        operation: 'delete',
-        version: newVersion,
-        timestamp: now,
+        await tx.insert(syncLog).values({
+            entityType: 'note',
+            entityId: noteId,
+            operation: 'delete',
+            version: newVersion,
+            timestamp: now,
+        });
     });
 
     return c.json({ success: true });
@@ -214,38 +264,23 @@ notesRoutes.post('/:id/links', async (c) => {
 notesRoutes.get('/:id/backlinks', async (c) => {
     const noteId = c.req.param('id');
 
-    // Get all links where this note is the target
-    const links = await db
+    // Single JOIN query instead of N+1
+    const backlinks = await db
         .select({
-            sourceNoteId: noteLinks.sourceNoteId,
-            createdAt: noteLinks.createdAt,
+            id: notes.id,
+            title: notes.title,
+            updatedAt: notes.updatedAt,
         })
         .from(noteLinks)
-        .where(eq(noteLinks.targetNoteId, noteId));
-
-    // Get source note details
-    const backlinks = await Promise.all(
-        links.map(async (link) => {
-            const sourceNote = await db
-                .select({
-                    id: notes.id,
-                    title: notes.title,
-                    updatedAt: notes.updatedAt,
-                })
-                .from(notes)
-                .where(eq(notes.id, link.sourceNoteId))
-                .limit(1);
-
-            return sourceNote[0] || null;
-        })
-    );
-
-    // Filter out nulls (deleted notes)
-    const validBacklinks = backlinks.filter(Boolean);
+        .innerJoin(notes, eq(noteLinks.sourceNoteId, notes.id))
+        .where(and(
+            eq(noteLinks.targetNoteId, noteId),
+            isNull(notes.deletedAt)
+        ));
 
     return c.json({
-        count: validBacklinks.length,
-        backlinks: validBacklinks,
+        count: backlinks.length,
+        backlinks,
     });
 });
 

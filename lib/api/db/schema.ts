@@ -15,6 +15,7 @@ export const notes = sqliteTable('notes', {
     deletedAt: integer('deleted_at', { mode: 'timestamp' }), // Soft delete
 }, (table) => ({
     publishedSlugIdx: index('published_slug_idx').on(table.publishedSlug),
+    activeUpdatedIdx: index('notes_active_updated_idx').on(table.deletedAt, table.updatedAt),
 }));
 
 // Transcripts
@@ -32,6 +33,7 @@ export const transcripts = sqliteTable('transcripts', {
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     recordingIdIdx: index('recording_id_idx').on(table.recordingId),
+    activeCreatedIdx: index('transcripts_active_created_idx').on(table.deletedAt, table.createdAt),
 }));
 
 // Settings (single row)
@@ -98,6 +100,7 @@ export const syncLog = sqliteTable('sync_log', {
     timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
 }, (table) => ({
     entityIdx: index('sync_log_entity_idx').on(table.entityType, table.entityId),
+    timestampIdx: index('sync_log_timestamp_idx').on(table.timestamp),
 }));
 
 // Tasks
@@ -109,11 +112,14 @@ export const tasks = sqliteTable('tasks', {
     dueDate: integer('due_date', { mode: 'timestamp' }),
     position: integer('position').default(0), // For sorting
     tags: text('tags'), // JSON array
+    version: integer('version').default(1),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     dueDateIdx: index('tasks_due_date_idx').on(table.dueDate),
     completedIdx: index('tasks_completed_idx').on(table.completed),
+    activeIdx: index('tasks_active_idx').on(table.deletedAt, table.completed),
 }));
 
 // Kanban Columns
@@ -121,7 +127,9 @@ export const kanbanColumns = sqliteTable('kanban_columns', {
     id: text('id').primaryKey(),
     title: text('title').notNull(),
     position: integer('position').default(0),
+    version: integer('version').default(1),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 });
 
 // Kanban Cards
@@ -131,7 +139,9 @@ export const kanbanCards = sqliteTable('kanban_cards', {
     title: text('title').notNull(),
     description: text('description'),
     position: integer('position').default(0),
+    version: integer('version').default(1),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     columnIdIdx: index('kanban_cards_column_id_idx').on(table.columnId),
 }));
@@ -143,8 +153,10 @@ export const canvases = sqliteTable('canvases', {
     data: text('data').notNull(), // JSON blob from Excalidraw
     thumbnail: text('thumbnail'), // Base64 preview image (optional)
     tags: text('tags'), // JSON array
+    version: integer('version').default(1),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     updatedAtIdx: index('canvases_updated_at_idx').on(table.updatedAt),
 }));
@@ -156,7 +168,10 @@ export const journalEntries = sqliteTable('journal_entries', {
     mood: text('mood'), // 'great' | 'good' | 'okay' | 'bad' | null
     tags: text('tags'), // JSON array
     convertedTo: text('converted_to'), // 'task:id' | 'note:id' | 'canvas:id'
+    version: integer('version').default(1),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     createdAtIdx: index('journal_created_at_idx').on(table.createdAt),
 }));
@@ -200,8 +215,10 @@ export const bookmarks = sqliteTable('bookmarks', {
     image: text('image'),
     favicon: text('favicon'),
     tags: text('tags'), // JSON array
+    version: integer('version').default(1),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
     urlIdx: index('bookmarks_url_idx').on(table.url),
     createdAtIdx: index('bookmarks_created_at_idx').on(table.createdAt),

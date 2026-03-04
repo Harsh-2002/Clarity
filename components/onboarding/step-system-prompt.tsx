@@ -27,7 +27,7 @@ export function StepSystemPrompt() {
         <StepProgress />
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <h1 className="text-3xl font-medium tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
             Final Polish
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest text-[10px]">
@@ -41,7 +41,7 @@ export function StepSystemPrompt() {
               value={customSystemPrompt}
               onChange={(e) => setCustomSystemPrompt(e.target.value)}
               placeholder="Ex: Focus on medical terminology, maintain speaker verbatim, format as a bulleted list..."
-              className="w-full p-6 border-transparent rounded-3xl bg-muted/20 hover:bg-muted/30 focus:border-foreground/20 focus:ring-0 focus:bg-background transition-all min-h-[160px] resize-none text-center placeholder:text-muted-foreground/50 text-sm leading-relaxed"
+              className="w-full p-6 border-transparent rounded-3xl bg-muted/20 hover:bg-muted/30 focus:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus:bg-background transition-all min-h-[160px] resize-none text-center placeholder:text-muted-foreground/50 text-sm leading-relaxed"
             />
             <div className="absolute right-4 bottom-4 text-muted-foreground opacity-50">
               <Sparkles className="w-4 h-4" />

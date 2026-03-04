@@ -1,9 +1,10 @@
 import { db } from "@/lib/api/db/client"
 import { canvases } from "@/lib/api/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, isNull } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+import { writeSyncLog } from "@/lib/api/db/sync-helpers"
 
 // Validation schemas
 const createCanvasSchema = z.object({
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
                 updatedAt: canvases.updatedAt,
             })
             .from(canvases)
+            .where(isNull(canvases.deletedAt))
             .orderBy(desc(canvases.updatedAt))
 
         return NextResponse.json(allCanvases)
@@ -58,9 +60,12 @@ export async function POST(req: NextRequest) {
             id,
             name: name || "Untitled Canvas",
             data: data || "{}",
+            version: 1,
             createdAt: new Date(),
             updatedAt: new Date(),
         })
+
+        await writeSyncLog('canvas', id, 'create', 1)
 
         return NextResponse.json({ success: true, id })
     } catch (error) {

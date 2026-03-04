@@ -20,6 +20,9 @@ import { BacklinksPanel } from "@/components/editor/backlinks-panel"
 import { toast } from "sonner"
 import { SlugEditorDialog } from "@/components/notes/slug-editor-dialog"
 import { apiFetch } from "@/lib/storage"
+import { isOfflineSyncEnabled } from "@/lib/sync/pwa-detection"
+import { getLocalDb } from "@/lib/sync/db"
+import { SyncEngine } from "@/lib/sync/engine"
 
 const NovelEditor = dynamic(() => import("@/components/editor/novel-editor"), {
     ssr: false,
@@ -59,26 +62,60 @@ export default function NotesPageClient() {
 
     const loadNotes = useCallback(async () => {
         try {
-            const data = await apiFetch<any[]>("/notes")
+            let transformed: Note[]
 
-            // Transform API response to match our Note interface
-            const transformed = data.map((n: any) => ({
-                id: n.id,
-                title: n.title,
-                content: n.content,
-                isPublished: n.isPublished,
-                publishedSlug: n.publishedSlug,
-                viewCount: n.viewCount || 0,
-                createdAt: new Date(n.createdAt).getTime(),
-                updatedAt: new Date(n.updatedAt).getTime()
-            }))
+            if (isOfflineSyncEnabled()) {
+                try {
+                    const engine = SyncEngine.getInstance()
+                    try { await engine.initialSync() } catch {}
+                    const db = getLocalDb()
+                    const all = await db.notes.toArray()
+                    transformed = all.filter(n => !n.deletedAt).map(n => ({
+                        id: n.id,
+                        title: n.title,
+                        content: n.content,
+                        isPublished: n.isPublished,
+                        publishedSlug: n.publishedSlug as string | null,
+                        viewCount: n.viewCount || 0,
+                        createdAt: n.createdAt,
+                        updatedAt: n.updatedAt,
+                    }))
+                } catch {
+                    // Fallback to network
+                    const data = await apiFetch<any[]>("/notes")
+                    transformed = data.map((n: any) => ({
+                        id: n.id, title: n.title, content: n.preview || n.content || "",
+                        isPublished: n.isPublished, publishedSlug: n.publishedSlug,
+                        viewCount: n.viewCount || 0,
+                        createdAt: new Date(n.createdAt).getTime(),
+                        updatedAt: new Date(n.updatedAt).getTime()
+                    }))
+                }
+            } else {
+                const data = await apiFetch<any[]>("/notes")
+                transformed = data.map((n: any) => ({
+                    id: n.id, title: n.title, content: n.preview || n.content || "",
+                    isPublished: n.isPublished, publishedSlug: n.publishedSlug,
+                    viewCount: n.viewCount || 0,
+                    createdAt: new Date(n.createdAt).getTime(),
+                    updatedAt: new Date(n.updatedAt).getTime()
+                }))
+            }
             setNotes(transformed)
             // Only select first note if we don't have one selected
             if (transformed.length > 0) {
                 const first = transformed[0]
                 setSelectedNote(prev => {
                     if (prev) return prev
-                    setContent(first.content)
+                    // Fetch full content for the first note
+                    apiFetch<any>(`/notes/${first.id}`).then(full => {
+                        const fullContent = full.content || ""
+                        setContent(fullContent)
+                        setSelectedNote(s => s?.id === first.id ? { ...first, content: fullContent } : s)
+                        setNotes(ns => ns.map(n => n.id === first.id ? { ...first, content: fullContent } : n))
+                    }).catch(() => {
+                        setContent(first.content || "")
+                    })
                     return first
                 })
             }
@@ -778,13 +815,20 @@ export default function NotesPageClient() {
                         filteredAndSortedNotes.map((note) => (
                             <div
                                 key={note.id}
-                                onClick={() => {
+                                onClick={async () => {
                                     setSelectedNote(note)
                                     setViewMode("editor")
+                                    // Fetch full content from individual endpoint
                                     try {
-                                        setContent(note.content)
+                                        const full = await apiFetch<any>(`/notes/${note.id}`)
+                                        const fullContent = full.content || ""
+                                        setContent(fullContent)
+                                        // Update the note in state with full content
+                                        const updated = { ...note, content: fullContent }
+                                        setSelectedNote(updated)
+                                        setNotes(prev => prev.map(n => n.id === note.id ? updated : n))
                                     } catch {
-                                        setContent(JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }))
+                                        setContent(note.content || JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }))
                                     }
                                 }}
                                 className={cn(
@@ -800,10 +844,17 @@ export default function NotesPageClient() {
                                             {note.title}
                                         </h3>
                                         <div className="text-xs text-muted-foreground line-clamp-2">
-                                            {note.content.includes('"text":')
-                                                ? JSON.parse(note.content).content?.[0]?.content?.[0]?.text || "No content"
-                                                : "text-muted-foreground"
-                                            }
+                                            {(() => {
+                                                try {
+                                                    const c = note.content || ""
+                                                    if (c.includes('"text":')) {
+                                                        return JSON.parse(c).content?.[0]?.content?.[0]?.text || "No content"
+                                                    }
+                                                    return c.slice(0, 100) || "No content"
+                                                } catch {
+                                                    return "No content"
+                                                }
+                                            })()}
                                         </div>
                                     </div>
                                     <button

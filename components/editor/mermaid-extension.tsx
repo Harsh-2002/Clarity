@@ -131,7 +131,7 @@ export const MermaidExtension = Node.create({
     },
 
     addNodeView() {
-        return ReactNodeViewRenderer(MermaidNodeView)
+        return ReactNodeViewRenderer(MermaidNodeView as any)
     }
 })
 

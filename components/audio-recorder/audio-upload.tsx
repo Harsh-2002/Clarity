@@ -21,7 +21,7 @@ export function AudioUpload({ onFileSelected }: AudioUploadProps) {
 
     if (!file) return
 
-    const settings = getSettings()
+    const settings = await getSettings()
     const provider = settings.selectedProvider
     const providerConfig = provider ? PROVIDER_CONFIGS[provider] : null
 

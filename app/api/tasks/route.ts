@@ -1,9 +1,10 @@
 import { db } from "@/lib/api/db/client"
 import { tasks } from "@/lib/api/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, isNull } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { verifyAuth, unauthorized, badRequest, serverError } from "@/lib/api/middleware/nextjs-auth"
+import { writeSyncLog } from "@/lib/api/db/sync-helpers"
 
 // Validation schemas
 const createTaskSchema = z.object({
@@ -30,7 +31,9 @@ export async function GET(req: NextRequest) {
     if (!userId) return unauthorized()
 
     try {
-        const allTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt))
+        const allTasks = await db.select().from(tasks)
+            .where(isNull(tasks.deletedAt))
+            .orderBy(desc(tasks.createdAt))
         return NextResponse.json(allTasks)
     } catch (error) {
         console.error("Failed to fetch tasks:", error)
@@ -59,9 +62,12 @@ export async function POST(req: NextRequest) {
             priority: priority || "medium",
             completed: completed || false,
             dueDate: dueDate ? new Date(dueDate) : null,
+            version: 1,
             createdAt: createdAt ? new Date(createdAt) : new Date(),
             updatedAt: new Date(),
         })
+
+        await writeSyncLog('task', id, 'create', 1)
 
         return NextResponse.json({ success: true })
     } catch (error) {
@@ -85,6 +91,10 @@ export async function PUT(req: NextRequest) {
 
         const { id, text, priority, completed, dueDate, position } = result.data
 
+        // Get current version
+        const existing = await db.select({ version: tasks.version }).from(tasks).where(eq(tasks.id, id)).limit(1)
+        const newVersion = (existing[0]?.version || 0) + 1
+
         await db.update(tasks)
             .set({
                 ...(text !== undefined && { text }),
@@ -92,9 +102,12 @@ export async function PUT(req: NextRequest) {
                 ...(completed !== undefined && { completed }),
                 ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
                 ...(position !== undefined && { position }),
+                version: newVersion,
                 updatedAt: new Date()
             })
             .where(eq(tasks.id, id))
+
+        await writeSyncLog('task', id, 'update', newVersion)
 
         return NextResponse.json({ success: true })
     } catch (error) {
@@ -103,7 +116,7 @@ export async function PUT(req: NextRequest) {
     }
 }
 
-// DELETE /api/tasks - Delete task
+// DELETE /api/tasks - Soft delete task
 export async function DELETE(req: NextRequest) {
     const userId = await verifyAuth(req)
     if (!userId) return unauthorized()
@@ -116,7 +129,15 @@ export async function DELETE(req: NextRequest) {
     }
 
     try {
-        await db.delete(tasks).where(eq(tasks.id, id))
+        const existing = await db.select({ version: tasks.version }).from(tasks).where(eq(tasks.id, id)).limit(1)
+        const newVersion = (existing[0]?.version || 0) + 1
+
+        await db.update(tasks)
+            .set({ deletedAt: new Date(), version: newVersion, updatedAt: new Date() })
+            .where(eq(tasks.id, id))
+
+        await writeSyncLog('task', id, 'delete', newVersion)
+
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error("Failed to delete task:", error)

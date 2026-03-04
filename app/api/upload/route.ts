@@ -8,6 +8,9 @@ import { verifyAuth, unauthorized, badRequest, serverError } from '@/lib/api/mid
 // Upload directory
 const UPLOAD_DIR = join(process.cwd(), 'data', 'uploads');
 
+// Allowed image extensions
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+
 // Ensure upload directory exists
 async function ensureUploadDir() {
     if (!existsSync(UPLOAD_DIR)) {
@@ -28,7 +31,13 @@ export async function POST(req: NextRequest) {
             return badRequest('No file provided');
         }
 
-        // Validate file type (images only for now)
+        // Validate file extension against allowlist
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!ALLOWED_EXTENSIONS.has(ext)) {
+            return badRequest(`File type not allowed. Accepted: ${[...ALLOWED_EXTENSIONS].join(', ')}`);
+        }
+
+        // Also check MIME type as secondary validation
         if (!file.type.startsWith('image/')) {
             return badRequest('Only image files are allowed');
         }
@@ -37,9 +46,6 @@ export async function POST(req: NextRequest) {
         if (file.size > 20 * 1024 * 1024) {
             return badRequest('File too large (max 20MB)');
         }
-
-        // Generate unique filename
-        const ext = file.name.split('.').pop() || 'png';
         const filename = `${nanoid()}.${ext}`;
 
         // Ensure directory exists

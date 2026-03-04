@@ -7,7 +7,7 @@ import type { RecordingState } from "@/lib/audio-recorder"
 import { AudioVisualizer } from "./audio-visualizer"
 
 interface RecorderControlsProps {
-  onRecordingComplete: (blob: Blob, duration: number) => void
+  onRecordingComplete: (blob: Blob, duration: number, fileId?: string) => void
 }
 
 export function RecorderControls({ onRecordingComplete }: RecorderControlsProps) {

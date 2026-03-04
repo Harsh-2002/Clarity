@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Trash2, GripVertical, MoreHorizontal, X, Loader2, Columns } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence, Reorder } from "framer-motion"
 import { toast } from "sonner"
+import { useSyncedQuery } from "@/lib/sync/hooks"
+import { getLocalDb } from "@/lib/sync/db"
 
 interface Card {
     id: string
@@ -25,28 +27,33 @@ interface Column {
 
 export default function KanbanPage() {
     const [columns, setColumns] = useState<Column[]>([])
-    const [loading, setLoading] = useState(true)
     const [newCardTitle, setNewCardTitle] = useState<{ [key: string]: string }>({})
     const [addingToColumn, setAddingToColumn] = useState<string | null>(null)
     const [draggedCard, setDraggedCard] = useState<{ card: Card; fromColumn: string } | null>(null)
 
-    const fetchBoard = async () => {
-        try {
-            const res = await fetch("/api/kanban")
-            if (res.ok) {
-                const data = await res.json()
-                setColumns(data)
-            }
-        } catch (error) {
-            toast.error("Failed to load board")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const localFetchBoard = useCallback(async () => {
+        const db = getLocalDb()
+        const cols = (await db.kanbanColumns.toArray()).filter(c => !c.deletedAt).sort((a, b) => a.position - b.position)
+        const cards = (await db.kanbanCards.toArray()).filter(c => !c.deletedAt).sort((a, b) => a.position - b.position)
+        return cols.map(col => ({
+            ...col,
+            cards: cards.filter(card => card.columnId === col.id)
+        })) as Column[]
+    }, [])
+
+    const networkFetchBoard = useCallback(async () => {
+        const res = await fetch("/api/kanban")
+        if (!res.ok) throw new Error("Failed to load board")
+        return await res.json() as Column[]
+    }, [])
+
+    const { data: fetchedColumns, loading, refetch: fetchBoard } = useSyncedQuery(
+        localFetchBoard, networkFetchBoard, []
+    )
 
     useEffect(() => {
-        fetchBoard()
-    }, [])
+        if (fetchedColumns) setColumns(fetchedColumns)
+    }, [fetchedColumns])
 
     const syncBoard = async (updatedColumns: Column[]) => {
         try {
